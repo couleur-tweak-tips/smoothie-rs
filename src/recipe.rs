@@ -76,16 +76,27 @@ pub enum _Recipe {
     },
 }
 
-fn _parse_recipe(content: String) {
+fn parse_recipe(content: String) {
+
     let mut rc: HashMap<String, HashMap<&str, &str>> = HashMap::new();
 
+    let mut round = 0;
     let mut cur_section = String::new();
     let lines: Vec<&str> = content.split("\n").collect();
 
     for line in lines {
+        round += 1;
         let cur = line.trim();
 
         match cur {
+            _comment 
+                if cur.starts_with('#')  ||
+                   cur.starts_with('/')  ||
+                   cur.starts_with(';')  ||
+                   cur.starts_with(':')  => {}
+
+            _emptyline if cur.is_empty() => {}
+
             // e.g [frame interpolation]
             category if cur.starts_with('[') && cur.ends_with(']') => {
                 cur_section = category
@@ -100,38 +111,29 @@ fn _parse_recipe(content: String) {
                 }
             }
             // e.g weighting: gaussian
-            setting if cur.contains(":") => {
-                assert_ne!(
-                    cur_section,
-                    String::new(),
-                    "Setting {:?} has no parent category",
-                    setting
-                );
-                let parts: Vec<&str> = setting.splitn(2, ':').collect();
-                // split it into an array of key and value
+            setting if cur.contains(':') => {
 
-                assert_eq!(
-                    parts.len(),
-                    2,
-                    "Recipe: key/value does not have two elements: {:?}",
-                    setting
-                );
-                // ensure it has been properly parsed
+                if cur_section == String::new(){
+                    panic!(
+                        "Recipe: Setting {:?} has no parent category, line {round}",
+                        setting
+                    );
+                }
 
-                let (key, value) = (parts[0].trim(), parts[1].trim());
+                let (key, value) = setting.split_once(':')
+                    .expect("Recipe: Failed to split {setting}, line {round}");
 
-                rc.get_mut(&cur_section).unwrap().insert(key, value);
+                rc.get_mut(&cur_section).unwrap().insert(key.trim(), value.trim());
             }
-
-            _comment if cur.starts_with('#') => {}
-            _emptyline if cur == "" => {}
-            _ => panic!("Recipe: Don't know what to do with {:?}", cur),
+                            
+            _ => panic!("Recipe: Failed to parse {:?}, line {round}", cur),
         }
     }
     println!("{:?}", rc);
 }
 
 pub fn get_recipe(args: &Arguments) {
+
     let exe = match env::current_exe() {
         Ok(exe) => exe,
         Err(e) => panic!("Could not resolve Smoothie's binary path: {}", e),
@@ -174,5 +176,5 @@ pub fn get_recipe(args: &Arguments) {
         Err(e) => panic!("Error reading file: {}", e),
     };
 
-    _parse_recipe(content);
+    parse_recipe(content);
 }
