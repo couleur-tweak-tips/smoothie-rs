@@ -1,5 +1,5 @@
 use crate::cli::Arguments;
-use serde_json::Result;
+// use serde_json::Result;
 use std::{collections::HashMap, fs, path::PathBuf};
 
 pub struct QueueObject {
@@ -23,6 +23,28 @@ struct Timecodes {
 
 /// Attempts to resolve and structure input structs from CLI arguments
 pub fn resolve_input(mut args: Arguments) {
+    if args.input.is_empty() && args.json.is_none() && args.tui == true {
+        use rfd::FileDialog;
+
+        let _input = FileDialog::new()
+            .add_filter(
+                "Video file",
+                &[
+                    "mp4", "mkv", "webm", "mov", "avi", "wmv", "flv", "ts", "m3u8",
+                ],
+            )
+            .set_title("Select video(s) to queue to Smoothie")
+            .set_directory("/")
+            .pick_files();
+
+        println!("{:?}", _input);
+
+        args.input = match _input {
+            Some(paths) => paths,
+            None => std::process::exit(0),
+        };
+    }
+
     if !args.input.is_empty() {
         let mut input: Vec<PathBuf> = Vec::new();
         // create a temporary vector (array)
