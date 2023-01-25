@@ -10,7 +10,7 @@ Thanks to yalter and anima for inspiration (though I'll copying as less code as 
 ### Development goals
 
 - [X] Basic clap functionality/looping/queue
-- [ ] Get VSPipe working with a temporary blur-style vs script appending, until last goal is met
+- [ ] Get VSPipe working with a temporary smoothie-style json string in --arg, until last goal is met
 - [ ] Get Smoothie to a working state
 - [ ] Add my extra boilerplate debugging args
 - [ ] Merge `-cui`, `-input` and `-json` (determine which case scenario)
@@ -30,16 +30,17 @@ This would slim down Smoothie's bundle just to:
             - 💾 ``sm.exe`` - consider that the "core", will be the biggest file out of the two
             - 🗒 ``last_args.txt`` - not really a binary but i prefer it tucked in bin
             - 🗒 ``last_script.vpy``- 
-            - 📂``VapourSynth/``
-                - ⚙ `VapourSynth.dll` - no idea if anything else is needed, haven't looked into last goal yet
-                - 📂``Plugins/``
-                    - ⚙ ``libvslsmashsource.dll`` - to input videos
-                    - ⚙ ``RemapFramesVapoursynth.dll`` - for `-padding`
-                    - ⚙ ``RIFE.dll`` - for low fps interpolation, uses /models/
-                    - ⚙ ``libmvtools.dll`` - frame motion estimation
-                    - ⚙ ``svpflow1_vs.dll`` - ' '
-                    - ⚙ ``svpflow2_vs.dll`` - '
-                    - ⚙ ``akarin.dll`` - used just for it's expr plugin
+            - ⚙ `VapourSynth.dll` - no idea if anything else is needed, haven't looked into last goal yet
+            - ⚙ `msvcp140.dll`, `vcruntime140.dll`, `vcruntime140_1.dll` - dependencies for Rust & VapourSynth
+            - 📝 `portable.vs` - tells VapourSynth it's a portable env, remove it for it to use global
+            - 📂``vapoursynth64/lugins/``
+                - ⚙ ``libvslsmashsource.dll`` - to input videos
+                - ⚙ ``RemapFramesVapoursynth.dll`` - for `-padding`
+                - ⚙ ``RIFE.dll`` - for low fps interpolation, uses /models/
+                - ⚙ ``libmvtools.dll`` - frame motion estimation
+                - ⚙ ``svpflow1_vs.dll`` - ' '
+                - ⚙ ``svpflow2_vs.dll`` - '
+                - ⚙ ``akarin.dll`` - used just for it's expr plugin
 
 ## The future of this repository
 
