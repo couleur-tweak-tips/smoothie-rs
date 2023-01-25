@@ -3,17 +3,24 @@
 name = "smoothie-rs"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
 
 [dependencies]
-clap = {version = "4.0.14", features = ["derive"] } # cli helper
+clap = {version = "4.0.14", features = ["derive"] } # cli arg helper
 color-eyre = "0.6.2" # error handling
+open-file = "0.1.0"  # open file with default app
+rfd = "0.10.0" # open file dialog 
+# rustsynth = "0.2.1" # wrapper for VapourSynth.dll
 
 # json stuff
 serde = "1.0.152" 
 serde_derive = "1.0.152"
 serde_json = "1.0.91"
 
-# win32
+[build-dependencies]
+winres = "0.1" # give the exe an icon
+
+# win32, mainly used for to move the tui console to a corner
 [dependencies.windows]
 version = "0.43.0"
 features = [
