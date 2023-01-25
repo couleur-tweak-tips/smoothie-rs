@@ -1,24 +1,22 @@
-#[macro_use]
+#[macro_use] // to parse --json in video.rs
 extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
 
-use clap::Parser;
+use clap::Parser; // cli.rs
 
 mod cli;
 mod recipe;
-// mod recipe;
 mod video;
 // mod exec;
 
 fn main() {
     cli::void_args();
-    // color_eyre::install().unwrap();
+    color_eyre::install().expect("Failed setting up error handler");
 
-    let _args = cli::Arguments::parse();
+    let args = cli::Arguments::parse();
 
-    // // let rc: HashMap <String, String> = HashMap::new();
-    // let _rc = recipe::get_recipe(&_args);
-    // let _videos = video::resolve_input(_args);
-    // // exec::smoothing(videos);
+    let _rc = recipe::get_recipe(&args);
+    let _videos = video::resolve_input(args);
+    // exec::smoothing(videos);
 }
