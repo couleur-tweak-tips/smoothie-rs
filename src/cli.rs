@@ -14,6 +14,10 @@ pub struct Arguments {
     #[clap(short, long, visible_alias = "out")]
     pub output: Option<String>,
 
+    /// Makes sm behave like an app instead of a CLI tool (e.g pause before exitting on an error)
+    #[clap(short, long, default_value_t = false)]
+    pub tui: bool,
+
     // /// Override the output directory for all files
     // #[clap(short, long, visible_alias="outd")]
     // pub outdir: PathBuf,
@@ -145,7 +149,10 @@ pub fn void_args() {
                     .output()
                     .expect("failed to execute process");
             } else {
-                println!("The smoothie binary is located at {}", current_exe_path.display());
+                println!(
+                    "The smoothie binary is located at {}",
+                    current_exe_path.display()
+                );
             }
         }
         _ => return,
