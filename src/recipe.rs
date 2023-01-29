@@ -10,7 +10,7 @@ use std::{env, fs};
 
 use std::io::Read;
 
-type Recipe = HashMap<String, HashMap<String, String>>;
+pub type Recipe = HashMap<String, HashMap<String, String>>;
 
 fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
     assert!(ini.exists(), "Recipe at path `{:?}` does not exist", ini);
@@ -106,5 +106,6 @@ pub fn get_recipe(args: &Arguments) -> Recipe {
     parse_recipe(Path::join(bindir, "defaults.ini"), &mut rc);
     parse_recipe(rc_path, &mut rc);
     println!("rc: {:?}", rc);
-    return rc
+
+    rc
 }
