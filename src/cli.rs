@@ -1,5 +1,4 @@
 use clap::Parser;
-use open_file;
 use std::{env, path::PathBuf, process::Command};
 /// Smoothen up your gameplay footage with Smoothie, yum!
 #[derive(Parser, Debug)]
@@ -18,13 +17,13 @@ pub struct Arguments {
     #[clap(short, long, default_value_t = false)]
     pub tui: bool,
 
-    // /// Override the output directory for all files
-    // #[clap(short, long, visible_alias="outd")]
-    // pub outdir: PathBuf,
+    /// Override the output directory for all files
+    #[clap(long, visible_alias = "outd")]
+    pub outdir: Option<PathBuf>,
 
-    // /// Overrides output to an image of frame number passed
-    // #[clap(short, long, conflicts_with="encargs")]
-    // pub peek: i32,
+    /// Overrides output to an image of frame number passed
+    #[clap(long, conflicts_with = "encargs")]
+    pub peek: Option<i32>,
 
     // misc io
     /// Discard any audio tracks that'd pass to output
@@ -125,7 +124,9 @@ pub fn void_args() {
     };
 
     let current_exe = env::current_exe().expect("Could not determine exe");
-    let current_exe_path = current_exe.parent().unwrap();
+    let current_exe_path = current_exe
+        .parent()
+        .expect("Could not get folder of executable??");
 
     match first_arg.as_ref() {
         "rc" | "recipe" | "conf" | "config" => {
