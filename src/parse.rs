@@ -1,12 +1,18 @@
-pub fn parse_bool (boolean: &str) -> bool {
-    let yes = vec!["yes","y"];
-    let no = vec!["no","n"];
-    
-    if yes.contains(&boolean){
-        return true;
-    }else if no.contains(&boolean) {
-        return false;
-    }else {
-        panic!("Unknown boolean (true/false value): {:?}", boolean);
+pub fn _parse_bool(boolstr: &str) -> bool {
+    let pos = vec!["yes", "ye", "y", "on", "enabled", "1"];
+    let neg = vec!["no", "na", "n", "off", "disabled", "0"];
+
+    match boolstr {
+        _ if pos.contains(&boolstr) => true,
+        _ if neg.contains(&boolstr) => false,
+        _ => panic!("Unknown boolean (true/false value): {:?}", boolstr),
     }
 }
+
+// if yes.contains(&boolstr){
+//     return true;
+// }else if no.contains(&boolstr) {
+//     return false;
+// }else {
+//     panic!("Unknown boolean (true/false value): {:?}", boolstr);
+// }
