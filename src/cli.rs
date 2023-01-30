@@ -97,27 +97,65 @@ pub struct Arguments {
     #[clap(visible_alias = "!!", long, default_value_t = false)]
     pub rerun: bool,
 
-    // customization
-    /// Override FFmpeg encoding arguments
+    /// Override FFmpeg encoding arguments (prefer using --override)
     #[clap(
         visible_alias = "enc",
         long,
-        default_value_t = false,
         conflicts_with = "tompv",
         conflicts_with = "tonull"
     )]
-    pub encargs: bool,
+    pub encargs: Option<String>,
 
     /// Specify a recipe path
     #[clap(short, long, default_value = "recipe.ini")]
     pub recipe: String,
 
     /// Override recipe setting(s), e.g: --ov "flowblur;amount;40" "misc;container;MKV"
-    #[clap(visible_alias="ov", visible_alias="overide", long, default_value = "", num_args=1..)]
-    pub r#override: String,
+    #[clap(visible_alias="ov", visible_alias="overide", long, num_args=1..)]
+    pub r#override: Option<Vec<String>>,
 }
 
 pub fn void_args() {
+    if cfg!(debug_assertions) {
+        color_eyre::install().expect("Failed setting up error handler");
+    } else {
+        std::panic::set_hook(Box::new(|panic_info| {
+            let payload = panic_info.payload();
+            let msg = if let Some(s) = payload.downcast_ref::<&str>() {
+                s
+            } else if let Some(s) = payload.downcast_ref::<String>() {
+                s
+            } else {
+                "Unknown panic payload"
+            };
+            let (file, line, column) = match panic_info.location() {
+                Some(loc) => (loc.file(), loc.line().to_string(), loc.column().to_string()),
+                None => ("?", "?".into(), "?".into()),
+            };
+            let args: Vec<_> = env::args().collect();
+            rfd::MessageDialog::new()
+                .set_title("Smoothie crashed!")
+                .set_description(&format!(
+    r#"Error message:
+    {msg}
+    
+    Location in source:
+    {file}:{line}:{column}
+    
+    Arguments passed:
+    {:?}
+    
+    Note: If your PC is still going BRRR the rendering might still be ongoing :)
+    
+    If you'd like getting help take a screenshot of this message and your recipe and come over to discord.gg/CTT and make a post in #support
+                    "#,
+                    args
+                ))
+                .set_level(rfd::MessageLevel::Error)
+                .show();
+        }));
+    }
+
     let first_arg = match std::env::args().nth(1) {
         Some(arg) => arg,
         None => return,
