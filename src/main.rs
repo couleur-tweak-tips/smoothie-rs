@@ -1,14 +1,21 @@
 #[macro_use] // to parse --json in video.rs
 extern crate serde_derive;
+extern crate clap;
 extern crate ffprobe;
 extern crate serde;
 extern crate serde_json;
-#[allow(unused_imports)]
-use std::path::PathBuf;
 
 use clap::Parser; // cli.rs
 
+// structs, in order of use
+use crate::cli::Arguments;
+use crate::cmd::Command;
+use crate::recipe::Recipe;
+use crate::video::Payload;
+
 mod cli;
+mod cmd;
+mod exec;
 mod parse;
 mod recipe;
 mod video;
@@ -16,14 +23,16 @@ mod video;
 
 fn main() {
     cli::void_args();
-    color_eyre::install().expect("Failed setting up error handler");
 
-    let mut args = cli::Arguments::parse();
-    // mut bc args.input is cleaned up from non-existant files
+    let mut args: Arguments = cli::Arguments::parse();
+    // mutable because args.input is cleaned up from non-existent files
 
-    let mut rc: crate::recipe::Recipe = recipe::get_recipe(&mut args);
-    // mut bc --override
+    let recipe: Recipe = recipe::get_recipe(&args);
 
-    let _videos = video::resolve_input(&mut args, &mut rc);
-    // exec::smoothing(videos);
+    let payloads: Vec<Payload> = video::resolve_input(&mut args, &recipe);
+    // probe_input used to return valid video file paths and overwrites args.input
+
+    let _commands: Vec<Command> = cmd::build_commands(args, payloads, recipe);
+
+    /*exec::smoothing(videos); WIP */
 }
