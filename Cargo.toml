@@ -10,8 +10,9 @@ clap = {version = "4.1.4 ", features = ["derive"] } # cli arg helper
 color-eyre = "0.6.2" # error handling
 ffprobe = "0.3.3"
 open-file = "0.1.0"  # open file with default app
-rand = "0.8.5"
-rfd = "0.10.0" # open file dialog 
+rand = "0.8.5"  # randomly choose from fruits for suffix
+rfd = "0.10.0"  # open file dialog
+which = "4.4.0" # Get-Command / where.exe / which alternative
 # rustsynth = "0.2.1" # wrapper for VapourSynth.dll
 
 # json stuff
