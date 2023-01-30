@@ -1,31 +1,45 @@
 use crate::{cli::Arguments, recipe::Recipe};
 use ffprobe::FfProbe;
 use rand::seq::SliceRandom;
-// use serde_json::Result;
-// select random fruit suffix
-use std::{collections::HashMap, fs, path::PathBuf};
+use rfd::FileDialog;
+use std::{collections::HashMap, fs, path::{PathBuf, Path}};
 
 #[derive(Debug, Clone)]
 pub struct Payload {
-    videos: Vec<Source>,
-    outpath: String,
+    pub videos: Vec<Source>,
+    pub outpath: String,
 }
 #[derive(Debug, Clone)]
 pub struct Source {
-    path: PathBuf,    // D:\obs stuff\video.mp4
-    basename: String, // video
-    probe: FfProbe,   // provided by ffprobe
-    timecodes: Option<Vec<Timecodes>>,
+    pub path: PathBuf,    // D:\obs stuff\video.mp4
+    pub basename: String, // video
+    pub probe: FfProbe,   // provided by ffprobe
+    pub timecodes: Option<Vec<Timecodes>>,
     // bettertimecodes: Option<Vec<(String, String)>>
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Hash)]
-struct Timecodes {
-    filename: String,
-    fin: String,
-    start: String,
+pub struct Timecodes {
+    pub filename: String,
+    pub fin: String,
+    pub start: String,
 }
 
+pub struct QueueObject {
+    pub video: Option<PathBuf>,    // D:\obs stuff\video.mp4
+    pub videos: Option<Vec<PathBuf>>,
+    pub basename: String, // video
+    pub probe: FfProbe,   // provided by ffprobe
+    pub timecodes: Option<Vec<HashMap<PathBuf, NewTimeCodes>>>,
+    // bettertimecodes: Option<Vec<(String, String)>>
+}
+
+pub struct NewTimeCodes {
+    pub start: String,
+    pub fin: String,
+}
+
+/// Creates a directory to the given folder path (mainly used for args.outdir)
 fn ensure_dir(dir: &PathBuf, silent: bool) {
     if !dir.is_dir() {
         match fs::create_dir(dir) {
@@ -34,15 +48,46 @@ fn ensure_dir(dir: &PathBuf, silent: bool) {
                     println!("Creating folder `{:?}`", dir)
                 }
             }
-            Err(e) => panic!("Failed creating folder at `{:?}`, Error: {e}", dir),
+            Err(e) => panic!("Failed creating folder at `{:?}`, Error: {}", dir, e),
         }
     }
 }
 
+/// Returns and filters the valid videos amongst args.input / args.json
 fn probe_input(input: Vec<PathBuf>) -> HashMap<PathBuf, FfProbe> {
     let mut ret: HashMap<PathBuf, FfProbe> = HashMap::new();
     for vid in &input {
-        let probe = match ffprobe::ffprobe(vid) {
+        let path = match vid.canonicalize() {
+            Ok(path) => path,
+            _ => {
+                println!(
+                    "{:?} does not exist or is not a valid filepath, discarding..",
+                    vid
+                );
+                continue;
+            }
+        };
+
+        // Try to open the file
+        let file = match fs::File::open(&path) {
+            Ok(file) => file,
+            _ => {
+                println!("Error opening file: {:?}", path);
+                continue;
+            }
+        };
+
+        // Check if the file is empty (0 bytes)
+        let metadata = file.metadata().expect("Error getting file metadata");
+        if metadata.len() == 0 {
+            println!(
+                "{:?} is an empty file (0 bytes), discarding..",
+                path.file_name().expect("Failing getting input filename")
+            );
+            continue;
+        }
+
+        let probe = match ffprobe::ffprobe(path) {
             Ok(a) => a,
             Err(e) => {
                 println!("Skipping input file `{:?}` (failed probing): {:?}", &vid, e);
@@ -54,77 +99,105 @@ fn probe_input(input: Vec<PathBuf>) -> HashMap<PathBuf, FfProbe> {
     ret
 }
 
-pub fn _resolve_outpath(
+/// Generates an output file path
+pub fn resolve_outpath(
     args: &mut Arguments,
-    rc: &mut Recipe,
-    indir: PathBuf,
+    recipe: &Recipe,
+    in_dir: PathBuf,
     basename: String,
+    dont_format: bool,
 ) -> PathBuf {
-    if args.output.is_some() {}
+    if args.output.is_some() {
+        return PathBuf::from(args.output.as_ref().expect("Failed unwrapping --output"));
+    }
 
-    let outdir = if let Some(outdir_arg) = args.outdir.clone() {
-        println!("Using output directory `{:?}`", outdir_arg);
-        ensure_dir(&outdir_arg, false);
-        outdir_arg
-    } else if rc["misc"]["folder"].trim() != String::new() {
-        let outdir_recipe = PathBuf::from(rc["misc"]["folder"].clone());
-        ensure_dir(&outdir_recipe, false);
-        outdir_recipe
+    #[rustfmt::skip]
+        let fruits: Vec<&str> = [
+        "Berry",      "Cherry",   "Cranberry",   "Coconut",   "Kiwi",
+        "Avocado",    "Durian",   "Lemon",       "Fig",       "Lime",
+        "Mirabelle",  "Banana",   "Pineapple",   "Pitaya",    "Blueberry",
+        "Raspberry",  "Apricot",  "Strawberry",  "Melon",     "Papaya",
+        "Apple",      "Pear",     "Orange",      "Mango",     "Plum",
+        "Peach",      "Grape",    "Tomato",      "Cucumber",  "Eggplant",
+        "Guava",      "Honeydew", "Lychee",      "Nut",       "Quince",
+        "Olive",      "Passion",  "Plum",        "Pomelo",    "Raisin",
+    ].to_vec();
+
+    let mut format = if dont_format {
+        "%FILENAME%-SM".to_string()
     } else {
-        indir
+        recipe
+            .get("misc")
+            .expect("Failed getting [misc] from recipe")
+            .get("format")
+            .expect("Failed getting [misc]format: from recipe")
+            .to_uppercase()
     };
 
-    let container: String = if rc["misc"]["container"].trim() == String::new() {
+    let out_dir = if args.outdir.is_some() {
+        ensure_dir(
+            args.outdir
+                .as_ref()
+                .expect("--outdir: Failed unwrapping value in --outdir"),
+            false,
+        );
+        args.outdir
+            .clone()
+            .expect("Failed unwrapping string passed in --outdir")
+    } else {
+        in_dir
+    };
+
+    if format.contains("%FRUITS%") || format.contains("%FRUIT") {
+        format = format.replace("%FRUIT%", "%FRUITS%").replace(
+            "%FRUITS%",
+            &format!(
+                " {}",
+                fruits
+                    .choose(&mut rand::thread_rng())
+                    .expect("Failed to select a random suffix")
+            ),
+        );
+    }
+    if format.contains("%FILENAME") {
+        format = format.replace("%FILENAME%", &basename);
+    } else {
+        panic!("No `%FILENAME%` variable in recipe's `[misc] format:` key");
+    }
+
+    let rc_container = recipe
+        .get("misc")
+        .expect("Failed getting [misc] from recipe")
+        .get("container")
+        .expect("Failed getting [misc]container: from recipe")
+        .trim();
+
+    let container: String = if rc_container.is_empty() {
         println!("Defaulting output extension to .MP4");
         String::from("MP4")
     } else {
-        rc["misc"]["container"].replace(".", "").to_string()
+        rc_container.replace('.', "")
     };
 
-    let mut filename = String::from("");
-
-    if !rc["misc"]["prefix"].is_empty() {
-        filename.push_str(&rc["misc"]["prefix"].clone());
+    let mut out = out_dir.join(format!("{}.{}", &format, &container));
+    let mut round = 2;
+    while out.exists() {
+        out = out_dir
+            .clone()
+            .join(format!("{} ({round}).{}", &format, &container));
+        round += 1;
     }
 
-    filename.push_str(&basename);
-
-    #[rustfmt::skip]
-    let fruits: Vec<&str> = [
-        " Berry",      " Cherry",   " Cranberry",   " Coconut",   " Kiwi",
-        " Avocado",    " Durian",   " Lemon",       " Fig",       " Lime",
-        " Mirabelle",  " Banana",   " Pineapple",   " Pitaya",    " Blueberry",
-        " Raspberry",  " Apricot",  " Strawberry",  " Melon",     " Papaya",
-        " Apple",      " Pear",     " Orange",      " Mango",     " Plum",
-        " Peach",      " Grape",    " Tomato",      " Cucumber",  " Eggplant",
-        " Guava",      " Honeydew", " Lychee",      " Nut",       " Quince",
-        " Olive",      " Passion",  " Plum",        " Pomelo",    " Raisin",
-    ]
-    .to_vec();
-
-    let suffix: &str = &rc["misc"]["suffix"].clone();
-    // lmk if u manage to make it work without converting to a &str
-    let suffix: &str = match suffix {
-        "fruits" => fruits
-            .choose(&mut rand::thread_rng())
-            .expect("Failed to select a random suffix"),
-        _ => " ~ Smoothie",
-    };
-
-    filename.push_str(suffix);
-    filename.push_str(&format!(".{container}"));
-
-    return outdir.join(filename);
+    out
 }
 
 /// Attempts to resolve and structure input structs from CLI arguments
-pub fn resolve_input(args: &mut Arguments, _rc: &mut Recipe) -> Vec<Payload> {
+pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
     let mut payloads: Vec<Payload> = vec![];
+    // println!("wtf");
 
     if args.input.is_empty() && args.json.is_none() && args.tui == true {
-        use rfd::FileDialog;
-
-        let _input = FileDialog::new()
+        let input = FileDialog::new()
             .add_filter(
                 "Video file",
                 &[
@@ -135,72 +208,23 @@ pub fn resolve_input(args: &mut Arguments, _rc: &mut Recipe) -> Vec<Payload> {
             .set_directory("/")
             .pick_files();
 
-        println!("{:?}", _input);
+        println!("Added:");
+        dbg!(&input);
 
-        args.input = match _input {
+        args.input = match input {
             Some(paths) => paths,
             None => std::process::exit(0),
         };
     }
 
     if !args.input.is_empty() {
-        let mut input: Vec<PathBuf> = Vec::new();
-
-        for vid in &args.input {
-            // Get absolute form of the path (e.g .\video.mp4 -> C:\obs\videos.mp4)
-            let path = match vid.canonicalize() {
-                Ok(path) => path,
-                _ => {
-                    println!(
-                        "{:?} does not exist or is not a valid filepath, discarding..",
-                        vid
-                    );
-                    continue;
-                }
-            };
-
-            // Try to open the file
-            let file = match fs::File::open(&path) {
-                Ok(file) => file,
-                _ => {
-                    println!("Error opening file: {:?}", path);
-                    continue;
-                }
-            };
-
-            // Check if the file is empty (0 bytes)
-            let metadata = file.metadata().expect("Error getting file metadata");
-            if metadata.len() == 0 {
-                println!(
-                    "{:?} is an empty file (0 bytes), discarding..",
-                    path.file_name().expect("Failing getting input filename")
-                );
-                continue;
-            }
-
-            // None of the checks hooked up a "continue" statement, safe to add
-            input.push(path);
-        }
-
-        if input.is_empty() {
-            panic!("No input files could be resolved")
-        }
-
-        println!("\ninput: {:?}", args.input);
-        println!("clean: {:?}", input);
-
-        args.input = input;
+        let probe_map: HashMap<PathBuf, FfProbe> = probe_input(args.input.clone());
+        args.input = Vec::from_iter(probe_map.keys().cloned());
         // replace input with clean output
 
         for vid in args.input.clone() {
-            let probe: FfProbe = match ffprobe::ffprobe(&vid) {
-                Ok(info) => info,
-                Err(err) => {
-                    panic!("Could not analyze file with ffprobe: {:?}", err);
-                }
-            };
-
-            dbg!(&probe);
+            // println!("{:?}", probe);
+            // dbg!(&probe);
 
             payloads.push(Payload {
                 videos: vec![Source {
@@ -211,19 +235,23 @@ pub fn resolve_input(args: &mut Arguments, _rc: &mut Recipe) -> Vec<Payload> {
                         .to_str()
                         .expect("Failed converting input filename stem to &str")
                         .to_string(),
-                    probe,
+                    probe: probe_map
+                        .get(&*vid)
+                        .expect("Failed getting probe map key")
+                        .clone(),
                     timecodes: None,
                 }],
 
-                outpath: _resolve_outpath(
+                outpath: resolve_outpath(
                     args,
-                    _rc,
+                    recipe,
                     vid.parent().unwrap().to_path_buf(),
                     vid.file_stem()
                         .expect("Failed getting filename base name (stem) when resolving output")
                         .to_str()
                         .expect("Failed converting")
                         .to_string(),
+                    false,
                 )
                 .display()
                 .to_string(),
@@ -235,7 +263,7 @@ pub fn resolve_input(args: &mut Arguments, _rc: &mut Recipe) -> Vec<Payload> {
     else if args.json.is_some() {
         let _cuts: Vec<Timecodes> = match serde_json::from_str(&args.json.clone().unwrap()) {
             Ok(cut) => cut,
-            Err(e) => panic!("Failed parsing JSON: {e}"),
+            Err(e) => panic!("Failed parsing JSON: {}", e),
         };
 
         let _cuts: Vec<Timecodes> = serde_json::from_str(&args.json.clone().unwrap()).unwrap();
