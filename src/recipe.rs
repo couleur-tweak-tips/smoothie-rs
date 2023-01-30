@@ -12,7 +12,7 @@ use std::io::Read;
 
 pub type Recipe = HashMap<String, HashMap<String, String>>;
 
-fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
+pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
     assert!(ini.exists(), "Recipe at path `{:?}` does not exist", ini);
     println!("recipe: {:?}", ini);
 
@@ -35,7 +35,7 @@ fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
         Err(e) => panic!("Error reading file: {}", e),
     };
 
-    let mut cur_section = String::new();
+    let mut cur_category = String::new();
     let mut round = 1;
 
     for mut cur in content.split('\n') {
@@ -53,21 +53,21 @@ fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
 
             // [frame interpolation]
             category if cur.starts_with('[') && cur.ends_with(']') => {
-                cur_section = category
+                cur_category = category
                     .trim_matches(|c| c == '[' || c == ']')
                     // remove all [ and ] characters
                     .trim()
                     // remove any spaces that would be at the start and end
                     .to_string();
 
-                if !rc.contains_key(&cur_section) {
-                    rc.insert(cur_section.clone(), HashMap::new());
+                if !rc.contains_key(&cur_category) {
+                    rc.insert(cur_category.clone(), HashMap::new());
                 }
             }
 
             // weighting: gaussian
             setting if cur.contains(':') => {
-                if cur_section.is_empty() {
+                if cur_category.is_empty() {
                     panic!(
                         "Recipe: Setting {:?} has no parent category, line {round}",
                         setting
@@ -76,10 +76,10 @@ fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
 
                 let (key, value) = setting
                     .split_once(':')
-                    .expect("Recipe: Failed to split {setting}, line {round}");
+                    .expect("Recipe: Failed to split_once a key");
 
-                rc.get_mut(&cur_section)
-                    .expect("Failed to get section `{cur_section}`")
+                rc.get_mut(&cur_category)
+                    .expect("Failed to get section `{cur_category}`")
                     .insert(key.trim().to_string(), value.trim().to_string());
             }
             // forgot to put val into a comment!
@@ -94,17 +94,40 @@ pub fn get_recipe(args: &Arguments) -> Recipe {
         Err(e) => panic!("Could not resolve Smoothie's binary path: {}", e),
     };
 
-    let bindir = match exe.parent() {
-        Some(bindir) => bindir,
+    let bin_dir = match exe.parent() {
+        Some(bin_dir) => bin_dir,
         None => panic!("Could not resolve Smoothie's binary directory `{:?}`", exe),
     };
 
-    let rc_path = bindir.join(&args.recipe);
+    let rc_path = bin_dir.join(&args.recipe);
 
     let mut rc: Recipe = HashMap::new();
 
-    parse_recipe(Path::join(bindir, "defaults.ini"), &mut rc);
+    parse_recipe(Path::join(bin_dir, "defaults.ini"), &mut rc);
     parse_recipe(rc_path, &mut rc);
+
+    if args.r#override.is_some() {
+        dbg!(&args.r#override);
+        for ov in args
+            .r#override
+            .clone()
+            .expect("Failed unwrapping --override")
+        {
+            // let (category, key, value) = ov.splitn(3, ";").collect();
+            // bad code i know, let me know if you can make line above work ^
+            let mut iter = ov.splitn(3, ';');
+            let category = iter
+                .next()
+                .expect("Failed unpacking category of --override");
+            let key = iter.next().expect("Failed unpacking key of --override");
+            let value = iter.next().expect("Failed unpacking value of --override");
+
+            rc.get_mut(category)
+                .expect("Failed to get category from --override")
+                .insert(key.trim().to_string(), value.trim().to_string());
+        }
+    }
+
     println!("rc: {:?}", rc);
 
     rc
