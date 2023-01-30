@@ -1,5 +1,3 @@
-// build.rs
-
 extern crate winres;
 
 fn main() {
