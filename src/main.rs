@@ -4,8 +4,11 @@ extern crate clap;
 extern crate ffprobe;
 extern crate serde;
 extern crate serde_json;
+extern crate tokio;
 
 use clap::Parser; // cli.rs
+                  // use color_eyre::owo_colors::OwoColorize;
+extern crate colored; // not needed in Rust 2018
 
 // structs, in order of use
 use crate::cli::Arguments;
@@ -22,6 +25,17 @@ mod video;
 // mod exec;
 
 fn main() {
+    match enable_ansi_support::enable_ansi_support() {
+        Ok(()) => {}
+        Err(_) => {
+            // The operation was unsuccessful, typically because it's running on an older
+            // version of Windows. The program may choose to disable ANSI color code output in
+            // this case.
+            println!("Failed enabling ANSI color support, expect broken colors!")
+        }
+    }
+
+    parse::parse_update();
     cli::void_args();
 
     let mut args: Arguments = cli::Arguments::parse();
