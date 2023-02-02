@@ -1,5 +1,6 @@
 use crate::cli::Arguments;
 use crate::recipe::{parse_recipe, Recipe};
+use colored::Colorize;
 use std::collections::HashMap;
 use std::env::current_exe;
 
@@ -102,4 +103,54 @@ pub fn _parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
     }
 
     ret
+}
+
+// use crate::exec::_smoothing;
+use serde::{Deserialize};
+
+static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
+
+#[derive(Debug, Deserialize)]
+pub struct Release {
+    pub tag_name: String,
+    pub name: String,
+}
+
+// use reqwest::Error;
+// use colored::*;
+
+#[tokio::main]
+pub async fn ping_github() -> Result<Release, reqwest::Error> {
+    let client = reqwest::Client::builder()
+        .user_agent(APP_USER_AGENT)
+        .build()?;
+
+    let release: Release = client
+        .get("https://api.github.com/repos/couleur-tweak-tips/smoothie/releases/latest")
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    Ok(release)
+}
+
+pub fn parse_update() {
+    let result: Result<Release, reqwest::Error> = ping_github();
+
+    match result {
+        Ok(body) => {
+            if env!("CARGO_PKG_VERSION") != body.tag_name {
+                println!(
+                    "{} Current:  {}, Latest: {}",
+                    "An update is available!".bright_blue().bold(),
+                    env!("CARGO_PKG_VERSION").blue(),
+                    body.name.blue()
+                );
+            }
+        }
+        Err(e) => {
+            println!("Update: Failed checking for a new update, discarding.. {e:?}");
+        }
+    }
 }
