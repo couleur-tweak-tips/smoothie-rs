@@ -1,5 +1,6 @@
+### Quick clone & compile
 
-you need in path:
+You need in path:
 * ``git``
 * ``cargo`` (see [rustup](https://rustup.sh))
 and to run Smoothie have FFmpeg in path
@@ -15,3 +16,11 @@ cargo build --release
 explorer /select,.\target\release\smoothie-rs.exe
 ```
 > First & last lines are for Windows PowerShell
+
+### Guidelines
+
+- Do a little `cargo fmt` before commits
+- If you're suggesting a new feature try to follow this design (if applicable)
+    * Optional so it never gets in the ways of people who do not want to use it
+    * If user opt-ins but does not provide anything helpful for X feature, prompt the user
+    * Do not prompt the user like in point 2 if he provided "arguments"/info
