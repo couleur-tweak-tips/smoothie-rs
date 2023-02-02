@@ -1,3 +1,1 @@
-pub fn smoothing(){
-    
-}
+pub fn _smoothing() {}
