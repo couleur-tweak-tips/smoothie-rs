@@ -2,7 +2,11 @@ use crate::{cli::Arguments, recipe::Recipe};
 use ffprobe::FfProbe;
 use rand::seq::SliceRandom;
 use rfd::FileDialog;
-use std::{collections::HashMap, fs, path::{PathBuf, Path}};
+use std::{
+    collections::HashMap,
+    fs,
+    path::PathBuf,
+};
 
 #[derive(Debug, Clone)]
 pub struct Payload {
@@ -25,16 +29,16 @@ pub struct Timecodes {
     pub start: String,
 }
 
-pub struct QueueObject {
-    pub video: Option<PathBuf>,    // D:\obs stuff\video.mp4
+pub struct _QueueObject {
+    pub video: Option<PathBuf>, // D:\obs stuff\video.mp4
     pub videos: Option<Vec<PathBuf>>,
     pub basename: String, // video
     pub probe: FfProbe,   // provided by ffprobe
-    pub timecodes: Option<Vec<HashMap<PathBuf, NewTimeCodes>>>,
+    pub timecodes: Option<Vec<HashMap<PathBuf, _NewTimeCodes>>>,
     // bettertimecodes: Option<Vec<(String, String)>>
 }
 
-pub struct NewTimeCodes {
+pub struct _NewTimeCodes {
     pub start: String,
     pub fin: String,
 }
@@ -45,10 +49,10 @@ fn ensure_dir(dir: &PathBuf, silent: bool) {
         match fs::create_dir(dir) {
             Ok(_) => {
                 if !silent {
-                    println!("Creating folder `{:?}`", dir)
+                    println!("Creating folder `{dir:?}`")
                 }
             }
-            Err(e) => panic!("Failed creating folder at `{:?}`, Error: {}", dir, e),
+            Err(e) => panic!("Failed creating folder at `{dir:?}`, Error: {e}"),
         }
     }
 }
@@ -60,10 +64,7 @@ fn probe_input(input: Vec<PathBuf>) -> HashMap<PathBuf, FfProbe> {
         let path = match vid.canonicalize() {
             Ok(path) => path,
             _ => {
-                println!(
-                    "{:?} does not exist or is not a valid filepath, discarding..",
-                    vid
-                );
+                println!("{vid:?} does not exist or is not a valid filepath, discarding..");
                 continue;
             }
         };
@@ -72,7 +73,7 @@ fn probe_input(input: Vec<PathBuf>) -> HashMap<PathBuf, FfProbe> {
         let file = match fs::File::open(&path) {
             Ok(file) => file,
             _ => {
-                println!("Error opening file: {:?}", path);
+                println!("Error opening file: {path:?}");
                 continue;
             }
         };
@@ -127,10 +128,10 @@ pub fn resolve_outpath(
         "%FILENAME%-SM".to_string()
     } else {
         recipe
-            .get("misc")
-            .expect("Failed getting [misc] from recipe")
-            .get("format")
-            .expect("Failed getting [misc]format: from recipe")
+            .get("output")
+            .expect("Failed getting [output] from recipe")
+            .get("file format")
+            .expect("Failed getting `[output] file format:` from recipe")
             .to_uppercase()
     };
 
@@ -166,10 +167,10 @@ pub fn resolve_outpath(
     }
 
     let rc_container = recipe
-        .get("misc")
-        .expect("Failed getting [misc] from recipe")
+        .get("output")
+        .expect("Failed getting [output] from recipe")
         .get("container")
-        .expect("Failed getting [misc]container: from recipe")
+        .expect("Failed getting `[output] container:` from recipe")
         .trim();
 
     let container: String = if rc_container.is_empty() {
@@ -196,7 +197,7 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
     let mut payloads: Vec<Payload> = vec![];
     // println!("wtf");
 
-    if args.input.is_empty() && args.json.is_none() && args.tui == true {
+    if args.input.is_empty() && args.json.is_none() && args.tui {
         let input = FileDialog::new()
             .add_filter(
                 "Video file",
@@ -263,7 +264,7 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
     else if args.json.is_some() {
         let _cuts: Vec<Timecodes> = match serde_json::from_str(&args.json.clone().unwrap()) {
             Ok(cut) => cut,
-            Err(e) => panic!("Failed parsing JSON: {}", e),
+            Err(e) => panic!("Failed parsing JSON: {e}"),
         };
 
         let _cuts: Vec<Timecodes> = serde_json::from_str(&args.json.clone().unwrap()).unwrap();
