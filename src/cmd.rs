@@ -51,6 +51,9 @@ pub fn build_commands(_args: Arguments, payloads: Vec<Payload>, recipe: Recipe) 
             });
         }
     }
+    for cmd in &ret {
+        println!("{:?}, {:?}", cmd.ff, cmd.vs);
+    }
 
     ret
 }
