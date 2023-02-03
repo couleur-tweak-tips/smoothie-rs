@@ -5,7 +5,7 @@
 ## smoothie-rs
 
 Temporary repository hosting the code for Smoothie's future form: developped in rust 🦀.
-Thanks to yalter and anima for inspiration (though I'll copying as less code as possible).
+Thanks to yalter and anima for inspiration (though I'll be copying as less code as possible).
 
 ### Development goals
 
@@ -33,7 +33,7 @@ This would slim down Smoothie's bundle just to:
             - ⚙ `VapourSynth.dll` - no idea if anything else is needed, haven't looked into last goal yet
             - ⚙ `msvcp140.dll`, `vcruntime140.dll`, `vcruntime140_1.dll` - dependencies for Rust & VapourSynth
             - 📝 `portable.vs` - tells VapourSynth it's a portable env, remove it for it to use global
-            - 📂``vapoursynth64/lugins/``
+            - 📂``vapoursynth64/plugins/``
                 - ⚙ ``libvslsmashsource.dll`` - to input videos
                 - ⚙ ``RemapFramesVapoursynth.dll`` - for `-padding`
                 - ⚙ ``RIFE.dll`` - for low fps interpolation, uses /models/
