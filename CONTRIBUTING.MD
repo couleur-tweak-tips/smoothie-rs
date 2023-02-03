@@ -2,7 +2,7 @@
 
 You need in path:
 * ``git``
-* ``cargo`` (see [rustup](https://rustup.sh))
+* ``cargo`` (see [rustup](https://rustup.rs))
 and to run Smoothie have FFmpeg in path
 
 In a PowerShell prompt:
