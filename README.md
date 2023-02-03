@@ -5,7 +5,7 @@
 ## smoothie-rs
 
 Temporary repository hosting the code for Smoothie's future form: developped in rust 🦀.
-Thanks to yalter and anima for inspiration (though I'll copy as less code as possible).
+Thanks to yalter and anima for inspiration (though I'll be copying as less code as possible).
 
 ### Development goals
 
