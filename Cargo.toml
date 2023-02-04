@@ -11,14 +11,19 @@ color-eyre = "0.6.2" # error handling
 ffprobe = "0.3.3"
 open-file = "0.1.0"  # open file with default app
 rand = "0.8.5"  # randomly choose from fruits for suffix
-rfd = "0.10.0"  # open file dialog
+rfd = "0.11.0"  # open file dialog
 which = "4.4.0" # Get-Command / where.exe / which alternative
 # rustsynth = "0.2.1" # wrapper for VapourSynth.dll
+# rustsynth = {path = "./rustsynth/rustsynth/"}
 
 # json stuff
 serde = "1.0.152" 
 serde_derive = "1.0.152"
 serde_json = "1.0.91"
+reqwest = {version = "0.11.14", features = ["json"]}
+tokio = { version = "1.25.0", features = ["full"]}
+colored = "2.0.0"
+enable-ansi-support = "0.2.1"
 
 [build-dependencies]
 winres = "0.1" # give the exe an icon
@@ -36,6 +41,7 @@ features = [
     ]
 
 # for myself, uncommenting when building for release
+
 # [profile.release]
 # strip = true
 # opt-level = "s"
