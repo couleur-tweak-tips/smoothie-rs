@@ -2,43 +2,19 @@ use crate::{cli::Arguments, recipe::Recipe};
 use ffprobe::FfProbe;
 use rand::seq::SliceRandom;
 use rfd::FileDialog;
-use std::{
-    collections::HashMap,
-    fs,
-    path::PathBuf,
-};
+use std::{collections::HashMap, fs, path::PathBuf};
 
 #[derive(Debug, Clone)]
 pub struct Payload {
-    pub videos: Vec<Source>,
-    pub outpath: String,
-}
-#[derive(Debug, Clone)]
-pub struct Source {
-    pub path: PathBuf,    // D:\obs stuff\video.mp4
-    pub basename: String, // video
-    pub probe: FfProbe,   // provided by ffprobe
+    pub in_path: PathBuf,  // D:\obs stuff\video.mp4
+    pub out_path: PathBuf, // D:\obs stuff\video ~ Mango.mp4
+    pub basename: String,  // video
+    pub probe: FfProbe,    // provided by ffprobe
     pub timecodes: Option<Vec<Timecodes>>,
-    // bettertimecodes: Option<Vec<(String, String)>>
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq, Hash)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Timecodes {
-    pub filename: String,
-    pub fin: String,
-    pub start: String,
-}
-
-pub struct _QueueObject {
-    pub video: Option<PathBuf>, // D:\obs stuff\video.mp4
-    pub videos: Option<Vec<PathBuf>>,
-    pub basename: String, // video
-    pub probe: FfProbe,   // provided by ffprobe
-    pub timecodes: Option<Vec<HashMap<PathBuf, _NewTimeCodes>>>,
-    // bettertimecodes: Option<Vec<(String, String)>>
-}
-
-pub struct _NewTimeCodes {
     pub start: String,
     pub fin: String,
 }
@@ -57,47 +33,46 @@ fn ensure_dir(dir: &PathBuf, silent: bool) {
     }
 }
 
-/// Returns and filters the valid videos amongst args.input / args.json
-fn probe_input(input: Vec<PathBuf>) -> HashMap<PathBuf, FfProbe> {
-    let mut ret: HashMap<PathBuf, FfProbe> = HashMap::new();
-    for vid in &input {
-        let path = match vid.canonicalize() {
-            Ok(path) => path,
-            _ => {
-                println!("{vid:?} does not exist or is not a valid filepath, discarding..");
-                continue;
-            }
-        };
-
-        // Try to open the file
-        let file = match fs::File::open(&path) {
-            Ok(file) => file,
-            _ => {
-                println!("Error opening file: {path:?}");
-                continue;
-            }
-        };
-
-        // Check if the file is empty (0 bytes)
-        let metadata = file.metadata().expect("Error getting file metadata");
-        if metadata.len() == 0 {
-            println!(
-                "{:?} is an empty file (0 bytes), discarding..",
-                path.file_name().expect("Failing getting input filename")
-            );
-            continue;
+/// Only returns videos that are valid (exists, ffprobe-able)
+fn probe_video(input: &PathBuf) -> Option<FfProbe> {
+    let path = match input.canonicalize() {
+        Ok(path) => path,
+        _ => {
+            println!("{input:?} does not exist or is not a valid filepath, discarding..");
+            return None;
         }
+    };
 
-        let probe = match ffprobe::ffprobe(path) {
-            Ok(a) => a,
-            Err(e) => {
-                println!("Skipping input file `{:?}` (failed probing): {:?}", &vid, e);
-                continue;
-            }
-        };
-        ret.insert(vid.to_path_buf(), probe);
+    // Try to open the file
+    let file = match fs::File::open(&path) {
+        Ok(file) => file,
+        _ => {
+            println!("Error opening file: {path:?}");
+            return None;
+        }
+    };
+
+    // Check if the file is empty (0 bytes)
+    let metadata = file.metadata().expect("Error getting file metadata");
+    if metadata.len() == 0 {
+        println!(
+            "{:?} is an empty file (0 bytes), discarding..",
+            path.file_name().expect("Failing getting input filename")
+        );
+        return None;
     }
-    ret
+
+    let probe = match ffprobe::ffprobe(path) {
+        Ok(a) => a,
+        Err(e) => {
+            println!(
+                "Skipping input file `{:?}` (failed probing): {:?}",
+                &input, e
+            );
+            return None;
+        }
+    };
+    Some(probe)
 }
 
 /// Generates an output file path
@@ -195,7 +170,7 @@ pub fn resolve_outpath(
 /// Attempts to resolve and structure input structs from CLI arguments
 pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
     let mut payloads: Vec<Payload> = vec![];
-    // println!("wtf");
+    let mut videos: Vec<(PathBuf, FfProbe, Option<Vec<Timecodes>>)> = vec![];
 
     if args.input.is_empty() && args.json.is_none() && args.tui {
         let input = FileDialog::new()
@@ -217,111 +192,58 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
             None => std::process::exit(0),
         };
     }
-
     if !args.input.is_empty() {
-        let probe_map: HashMap<PathBuf, FfProbe> = probe_input(args.input.clone());
-        args.input = Vec::from_iter(probe_map.keys().cloned());
-        // replace input with clean output
-
-        for vid in args.input.clone() {
-            // println!("{:?}", probe);
-            // dbg!(&probe);
-
-            payloads.push(Payload {
-                videos: vec![Source {
-                    path: vid.clone(),
-                    basename: vid
-                        .file_stem()
-                        .expect("Failed getting input filename's base name (stem)")
-                        .to_str()
-                        .expect("Failed converting input filename stem to &str")
-                        .to_string(),
-                    probe: probe_map
-                        .get(&*vid)
-                        .expect("Failed getting probe map key")
-                        .clone(),
-                    timecodes: None,
-                }],
-
-                outpath: resolve_outpath(
-                    args,
-                    recipe,
-                    vid.parent().unwrap().to_path_buf(),
-                    vid.file_stem()
-                        .expect("Failed getting filename base name (stem) when resolving output")
-                        .to_str()
-                        .expect("Failed converting")
-                        .to_string(),
-                    false,
-                )
-                .display()
-                .to_string(),
-            })
+        // input is a vector of paths
+        for vid in &args.input {
+            let probe = match probe_video(vid) {
+                Some(probe) => probe,
+                None => continue, // filtered out
+            };
+            videos.push((vid.clone(), probe, None));
         }
-        // dbg!(&payloads);
+    } else if args.json.is_some() {
+        let cuts: HashMap<PathBuf, Vec<Timecodes>> =
+            match serde_json::from_str(&args.json.clone().unwrap()) {
+                Ok(cut) => cut,
+                Err(e) => panic!("Failed parsing JSON: {e}"),
+            };
+
+        for vid in Vec::from_iter(cuts.keys()) {
+            let probe = match probe_video(vid) {
+                Some(probe) => probe,
+                None => continue,
+            };
+            let timecodes: Vec<Timecodes> = cuts.get(vid).expect("Failed").to_owned();
+
+            videos.push((vid.clone(), probe, Some(timecodes)));
+
+        }
     }
-    // if args.input is not
-    else if args.json.is_some() {
-        let _cuts: Vec<Timecodes> = match serde_json::from_str(&args.json.clone().unwrap()) {
-            Ok(cut) => cut,
-            Err(e) => panic!("Failed parsing JSON: {e}"),
-        };
 
-        let _cuts: Vec<Timecodes> = serde_json::from_str(&args.json.clone().unwrap()).unwrap();
-
-        let mut aggregated_cuts: HashMap<String, Vec<(String, String)>> = HashMap::new();
-
-        for cut in _cuts.clone() {
-            if !aggregated_cuts.contains_key(&cut.filename) {
-                aggregated_cuts.insert(cut.filename.clone(), vec![(cut.start, cut.fin)]);
-            } else {
-                aggregated_cuts
-                    .get_mut(&cut.filename)
-                    .unwrap()
-                    .append(&mut vec![(cut.start, cut.fin)]);
-            }
-        }
-
-        dbg!(&aggregated_cuts);
-        let mut _sources: Vec<Source> = vec![];
-        // for cut in aggregated_cuts.keys() {
-        //     sources.push(
-        //         Source {
-        //             path: cut.into(),
-        //             basename: cut.
-        //             probe: (),
-        //             timecodes: () }
-        //     )
-        //     // payloads.push(
-        //     //     Payload {
-
-        //     //     }
-        //     // );
-        // }
-
-        // let mut _payload = Payload {
-        //     outpath: String::from("C:\\yay~SM.mp4"),
-        //     videos: vec![Source {
-        //         path: PathBuf::from("C:\\yay.mp4"),
-        //         basename: String::from("yay"),
-        //         probe: ffprobe::ffprobe("C:\\yay.mp4").unwrap(),
-        //         timecodes: None,
-        //     }],
-        // };
-        // // payload.outpath = String::from("hi");
-        // println!("{:?}", _cuts);
-        // for cut in &_cuts {
-        //     println!("filename: {:?}", cut.filename);
-        //     println!("start: {:?}", cut.start);
-        //     println!("fin: {:?}", cut.fin);
-        // }
-    };
+    for (vid, probe, timecodes) in videos {
+        payloads.push(Payload {
+            in_path: vid.clone(),
+            out_path: resolve_outpath(
+                args,
+                recipe,
+                vid.parent().unwrap().to_path_buf(),
+                vid.file_stem()
+                    .expect("Failed getting filename base name (stem) when resolving output")
+                    .to_str()
+                    .expect("Failed converting")
+                    .to_string(),
+                false,
+            ),
+            basename: vid
+                .file_stem()
+                .expect("Failed getting input filename's base name (stem)")
+                .to_str()
+                .expect("Failed converting input filename stem to &str")
+                .to_string(),
+            probe,
+            timecodes,
+        })
+    }
 
     payloads
-
-    // }else {
-    //     println!("ARGS: {:?}", args);
-    //     println!("JSON: {:?}, INPUT: {:?}", !args.json.is_none(), !args.input.is_empty());
-    //     panic!("Could not resolve input method (nor JSON or INPUT were provided)")
-    // }
 }
