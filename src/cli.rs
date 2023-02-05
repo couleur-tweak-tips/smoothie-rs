@@ -53,21 +53,17 @@ pub struct Arguments {
     #[clap(long, conflicts_with = "input")]
     pub json: Option<String>,
 
-    /// Split all cuts to separate files, used with -json
-    #[clap(
-        long,
-        default_value_t = false,
-        requires = "json",
-        conflicts_with = "input"
-    )]
-    pub split: bool,
+    /// New json is HashMap<Path, (start,fin)>, old is Vec<(PathBuf, start, fin)>
+    #[clap(long, default_value_t=false)]
+    pub old_json: bool,
 
     /// Join all cuts to a file, used with -json
     #[clap(
         long,
         default_value_t = false,
         requires = "json",
-        conflicts_with = "input"
+        conflicts_with = "input",
+        conflicts_with = "padding"
     )]
     pub trim: bool,
 
@@ -76,7 +72,8 @@ pub struct Arguments {
         long,
         default_value_t = false,
         requires = "json",
-        conflicts_with = "input"
+        conflicts_with = "input",
+        conflicts_with = "trim",
     )]
     pub padding: bool,
 
