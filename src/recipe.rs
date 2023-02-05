@@ -1,10 +1,7 @@
 use crate::cli::Arguments;
-#[allow(unused_imports)]
-use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use std::path::Path;
-#[allow(unused_imports)]
 use std::path::PathBuf;
 use std::{env, fs};
 
@@ -13,26 +10,26 @@ use std::io::Read;
 pub type Recipe = HashMap<String, HashMap<String, String>>;
 
 pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
-    assert!(ini.exists(), "Recipe at path `{:?}` does not exist", ini);
-    println!("recipe: {:?}", ini);
+    assert!(ini.exists(), "Recipe at path `{ini:?}` does not exist");
+    println!("recipe: {ini:?}");
 
     let mut file = match fs::File::open(&ini) {
         Ok(file) => file,
-        Err(e) => panic!("Error opening file: {}", e),
+        Err(e) => panic!("Error opening file: {e}"),
     };
 
     let metadata = match file.metadata() {
         Ok(metadata) => metadata,
-        Err(e) => panic!("Error getting file metadata: {}", e),
+        Err(e) => panic!("Error getting file metadata: {e}"),
     };
     if metadata.len() == 0 {
-        panic!("Error: File is empty: {:?}", file);
+        panic!("Error: File is empty: {file:?}");
     }
 
     let mut content = String::new();
     match file.read_to_string(&mut content) {
         Ok(_) => (),
-        Err(e) => panic!("Error reading file: {}", e),
+        Err(e) => panic!("Error reading file: {e}"),
     };
 
     let mut cur_category = String::new();
@@ -68,10 +65,7 @@ pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
             // weighting: gaussian
             setting if cur.contains(':') => {
                 if cur_category.is_empty() {
-                    panic!(
-                        "Recipe: Setting {:?} has no parent category, line {round}",
-                        setting
-                    );
+                    panic!("Recipe: Setting {setting:?} has no parent category, line {round}");
                 }
 
                 let (key, value) = setting
@@ -83,7 +77,7 @@ pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
                     .insert(key.trim().to_string(), value.trim().to_string());
             }
             // forgot to put val into a comment!
-            _ => panic!("Recipe: Failed to parse {:?}, line {round}", cur),
+            _ => panic!("Recipe: Failed to parse {cur:?}, line {round}"),
         }
     }
 }
@@ -91,12 +85,12 @@ pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
 pub fn get_recipe(args: &Arguments) -> Recipe {
     let exe = match env::current_exe() {
         Ok(exe) => exe,
-        Err(e) => panic!("Could not resolve Smoothie's binary path: {}", e),
+        Err(e) => panic!("Could not resolve Smoothie's binary path: {e}"),
     };
 
     let bin_dir = match exe.parent() {
         Some(bin_dir) => bin_dir,
-        None => panic!("Could not resolve Smoothie's binary directory `{:?}`", exe),
+        None => panic!("Could not resolve Smoothie's binary directory `{exe:?}`"),
     };
 
     let rc_path = bin_dir.join(&args.recipe);
@@ -128,7 +122,8 @@ pub fn get_recipe(args: &Arguments) -> Recipe {
         }
     }
 
-    println!("rc: {:?}", rc);
+    // dbg!(&rc);
+    // println!("rc: {:?}", rc);
 
     rc
 }
