@@ -106,9 +106,9 @@ pub fn _parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
 }
 
 // use crate::exec::_smoothing;
-use serde::{Deserialize};
+use serde::Deserialize;
 
-static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
+// static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 #[derive(Debug, Deserialize)]
 pub struct Release {
@@ -119,33 +119,33 @@ pub struct Release {
 // use reqwest::Error;
 // use colored::*;
 
-#[tokio::main]
-pub async fn ping_github() -> Result<Release, reqwest::Error> {
-    let client = reqwest::Client::builder()
-        .user_agent(APP_USER_AGENT)
-        .build()?;
+use std::time::Duration;
+use ureq::Agent;
 
-    let release: Release = client
+pub fn ping_github() -> Result<Release, ()> {
+    let agent: Agent = ureq::AgentBuilder::new()
+        .timeout_read(Duration::from_secs(5))
+        .timeout_write(Duration::from_secs(5))
+        .build();
+    let release: Release = agent
         .get("https://api.github.com/repos/couleur-tweak-tips/smoothie/releases/latest")
-        .send()
-        .await?
-        .json()
-        .await?;
+        .call()
+        .expect("Failed calling update")
+        .into_json()
+        .expect("Failed parsing JSON");
 
     Ok(release)
 }
 
 pub fn parse_update() {
-    let result: Result<Release, reqwest::Error> = ping_github();
-
-    match result {
+    match ping_github() {
         Ok(body) => {
             if env!("CARGO_PKG_VERSION") != body.tag_name {
                 println!(
                     "{} Current:  {}, Latest: {}",
                     "An update is available!".bright_blue().bold(),
-                    env!("CARGO_PKG_VERSION").blue(),
-                    body.name.blue()
+                    env!("CARGO_PKG_VERSION").bright_blue(),
+                    body.name.bright_blue()
                 );
             }
         }

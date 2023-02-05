@@ -4,7 +4,10 @@ extern crate clap;
 extern crate ffprobe;
 extern crate serde;
 extern crate serde_json;
-extern crate tokio;
+// extern crate tokio;
+
+extern crate anyhow;
+extern crate num_rational;
 
 use clap::Parser; // cli.rs
                   // use color_eyre::owo_colors::OwoColorize;
@@ -12,17 +15,17 @@ extern crate colored; // not needed in Rust 2018
 
 // structs, in order of use
 use crate::cli::Arguments;
-use crate::cmd::Command;
+// use crate::cmd::Command;
 use crate::recipe::Recipe;
 use crate::video::Payload;
 
 mod cli;
-mod cmd;
-mod exec;
+// mod output;
+// mod cmd;
+// mod exec;
 mod parse;
 mod recipe;
 mod video;
-// mod exec;
 
 fn main() {
     match enable_ansi_support::enable_ansi_support() {
@@ -46,7 +49,7 @@ fn main() {
     let payloads: Vec<Payload> = video::resolve_input(&mut args, &recipe);
     // probe_input used to return valid video file paths and overwrites args.input
 
-    let _commands: Vec<Command> = cmd::build_commands(args, payloads, recipe);
+    // let _commands: Vec<Command> = cmd::build_commands(args, payloads, recipe);
 
-    /*exec::smoothing(videos); WIP */
+    // exec::_smoothing(payloads);
 }
