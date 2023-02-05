@@ -5,48 +5,48 @@
 ## smoothie-rs
 
 Temporary repository hosting the code for Smoothie's future form: developped in rust 🦀.
-Thanks to yalter and anima for inspiration (though I'll be copying as less code as possible).
+Thanks to yalter and anima for inspiration (though I'll try to copy as less code as possible).
 
-### Development goals
+### Roadmap
 
-- [X] Basic clap functionality/looping/queue
-- [ ] Get VSPipe working with a temporary smoothie-style json string in --arg, until last goal is met
-- [ ] Get Smoothie to a working state
-- [ ] Add my extra boilerplate debugging args
-- [ ] Merge `-cui`, `-input` and `-json` (determine which case scenario)
-- [ ] Cleaner code rewrite so there's no nim/c code laying around just for win32 window manipulations
-- [ ] Get rid of Python runtime and call VapourSynth's API directly via DLL
+- [X] input processing
+- [X] ``rc`` and `dir` args
+- [X] recipe parsing with defaults backup
+- [ ] [rustsynth](https://github.com/animafps/rustsynth) vs node processing
+- [ ] Output CLI processing (ffmpeg)
+- [ ] Refactor VEGAS Pre-Renderer & [suckless-cut](https://github.com/couleur-tweak-tips/suckless-cut) to support sm-rs
 
-This would slim down Smoothie's bundle just to:
+
+Using rustsynth would slim down Smoothie's bundle just to:
 
 - 🗜 `smoothie-0.69.zip`
-
     - 📂``Smoothie/``
         - 📂``models/`` - rife models
         - 📂``masks/`` - artifact masking for flowblur (and maybe interp soon)
         - 📝 ``recipe.ini``
         - 📂``bin/`` - let me know a more fit name since there's also text files in here
+            - 📚 ``defaults.ini`` - read-only version of the recipe, used for fallback
             - 🧋 ``Smoothie.exe`` - this passes all arguments to sm and add `-cui`
             - 💾 ``sm.exe`` - consider that the "core", will be the biggest file out of the two
-            - 🗒 ``last_args.txt`` - not really a binary but i prefer it tucked in bin
-            - 🗒 ``last_script.vpy``- 
+            - 🗒 ``last_args.txt`` - not really a binary but I prefer it tucked in bin
             - ⚙ `VapourSynth.dll` - no idea if anything else is needed, haven't looked into last goal yet
             - ⚙ `msvcp140.dll`, `vcruntime140.dll`, `vcruntime140_1.dll` - dependencies for Rust & VapourSynth
             - 📝 `portable.vs` - tells VapourSynth it's a portable env, remove it for it to use global
-            - 📂``vapoursynth64/plugins/``
+            - 📂``/vapoursynth64/plugins/``
                 - ⚙ ``libvslsmashsource.dll`` - to input videos
                 - ⚙ ``RemapFramesVapoursynth.dll`` - for `-padding`
                 - ⚙ ``RIFE.dll`` - for low fps interpolation, uses /models/
-                - ⚙ ``libmvtools.dll`` - frame motion estimation
-                - ⚙ ``svpflow1_vs.dll`` - ' '
-                - ⚙ ``svpflow2_vs.dll`` - '
-                - ⚙ ``akarin.dll`` - used just for it's expr plugin
+                - ⚙ ``libmvtools.dll`` - used for flowblur
+                - ⚙ ``svpflow1_vs.dll`` & ``svpflow2_vs.dll`` - frame interpolation
+                - ⚙ ``akarin.dll`` - used for lexpr
+
+Else in that ``/bin/`` folder there would be a whole portable Python environment
 
 ## The future of this repository
 
 The replacement process will go like so:
 
-1. ctt/smoothie - new branch called "python-old" created (thus creating an easy to access archive of sm-py)
-1. ctt/smoothie - 1 new commit: "removed all python code"
-1. ctt/smoothie - 1 new commit: "copied over all rust code"
-1. ctt/smoothie-rs - archive repository and link ctt/smoothie in README
+1. ctt/smoothie - new branch called "python-old" created (thus creating an archive of how was smoothie before)
+2. ctt/smoothie - 1 new commit: "removed all python code 🐍❌"
+3. ctt/smoothie - 1 new commit: "copied over all rust code 🦀🦀"
+4. ctt/smoothie-rs - archive repository and link ctt/smoothie in README
