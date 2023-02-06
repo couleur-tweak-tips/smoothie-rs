@@ -1,8 +1,7 @@
 use clap::Parser;
-use std::{env, path::PathBuf, process::Command};
 use std::fs::File;
-use std::io::Read;
-
+use std::io::{Read, Write};
+use std::{env, path::PathBuf, process::Command};
 
 /// Smoothen up your gameplay footage with Smoothie, yum!
 #[derive(Parser, Debug)]
@@ -117,7 +116,6 @@ pub struct Arguments {
 }
 
 pub fn setup_args() -> Arguments {
-
     if cfg!(debug_assertions) {
         color_eyre::install().expect("Failed setting up error handler");
     } else {
@@ -161,7 +159,6 @@ If you'd like getting help take a screenshot of this message and your recipe and
         None => "".to_string(),
     };
 
-
     let current_exe = env::current_exe().expect("Could not determine exe");
     let current_exe_path = current_exe
         .parent()
@@ -171,7 +168,7 @@ If you'd like getting help take a screenshot of this message and your recipe and
         .parent()
         .expect("Could not get directory of directory's executable??");
 
-    let last_args = current_exe_path_dir.join("last_args.txt");
+    let mut last_args = current_exe_path_dir.join("last_args.txt");
     if !last_args.exists() {
         if File::create(&last_args).is_err() {
             panic!("Failed creating last_args.txt at {current_exe_path_dir:?}")
@@ -207,8 +204,8 @@ If you'd like getting help take a screenshot of this message and your recipe and
                 );
             }
             std::process::exit(0);
-        },
-        "-!!" | "!!" | "--rerun" => {
+        }
+        "-!!" | "!!" | "--rerun" | "--!!" => {
             let mut file = match File::open(&last_args) {
                 Ok(file) => file,
                 Err(e) => panic!("Error opening last_args.txt: {e}"),
@@ -218,27 +215,36 @@ If you'd like getting help take a screenshot of this message and your recipe and
                 Ok(_) => (),
                 Err(e) => panic!("Error reading last_args.txt: {e}"),
             };
-
-            let current_exe = &env::current_exe().expect("Could not determine exe").display().to_string();
-
-            let mut last_args_lines = content.lines().collect();
-            let mut final_args: Vec<&str> = vec![current_exe];
-            final_args.append(&mut last_args_lines);
-            // dbg!(&final_args);
-            // finished writing this at 1 am, it's bad code but it fucking works, deal with it or pr
-            match Arguments::try_parse_from(final_args) {
+            let mut last_args_lines: Vec<&str> = content.lines().collect();
+            match Arguments::try_parse_from(last_args_lines) {
                 Ok(args) => args,
                 Err(e) => panic!("{e}"),
             }
-        },
+        }
         _ => {
-            let mut file = match File::open(&last_args) {
+            // let mut file = match File::open(&mut last_args) {
+            //     Ok(file) => file,
+            //     Err(e) => panic!("Error opening last_args.txt: {e}"),
+            // };
+            let mut file = match File::create(&mut last_args) {
                 Ok(file) => file,
                 Err(e) => panic!("Error opening last_args.txt: {e}"),
             };
-            let a=b"Hello, world!";
-            // file.write_all(b"Hello, world!").expect("Failed writing arguments to last_args.txt");
+
+            // let len = env::args().len();
+            // let mut arr = [u8;(len)];
+
+            // let mut passed = vec![];
+            dbg!(&file);
+            for arg in env::args() {
+                write!(file, "{arg}\n").expect("Failed writing to last_args.txt");
+                // file.write_all(arg.as_ref()).expect("Failed writing to last_args.txt");
+                // passed.push(arg.as_bytes());
+                // println!("{:?}", arg);
+            }
+
+            // File::write(&mut file, passed.as_slice()).expect("Failed writing args to last_args.txt");
             Arguments::parse()
-        },
+        }
     }
 }
