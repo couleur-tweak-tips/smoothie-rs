@@ -4,9 +4,8 @@ extern crate clap;
 extern crate serde;
 extern crate serde_json;
 
-
-use std::env;
-use clap::Parser; // cli.rs
+use clap::Parser;
+use std::env; // cli.rs
 
 // use color_eyre::owo_colors::OwoColorize;
 extern crate colored;
@@ -28,15 +27,13 @@ mod video;
 use crate::{cli::Arguments, recipe::Recipe, video::Payload};
 use which::which;
 fn main() {
-
     if enable_ansi_support::enable_ansi_support().is_err() {
         println!("Failed enabling ANSI color support, expect broken colors!")
     }
 
     parse::parse_update();
 
-
-    let mut args: Arguments = cli::setup_args();;
+    let mut args: Arguments = cli::setup_args();
     // args.input is the only one being mutated in video.rs
 
     let recipe: Recipe = recipe::get_recipe(&args);
