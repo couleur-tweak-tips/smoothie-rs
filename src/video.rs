@@ -102,12 +102,12 @@ pub fn resolve_outpath(
     let mut format = if dont_format {
         "%FILENAME%-SM".to_string()
     } else {
-        recipe
-            .get("output")
-            .expect("Failed getting [output] from recipe")
-            .get("file format")
-            .expect("Failed getting `[output] file format:` from recipe")
-            .to_uppercase()
+        recipe.get("output", "file format").to_uppercase()
+        // .get("output")
+        // .expect("Failed getting [output] from recipe")
+        // .get("file format")
+        // .expect("Failed getting `[output] file format:` from recipe")
+        // .to_uppercase()
     };
 
     let out_dir = if args.outdir.is_some() {
@@ -141,12 +141,11 @@ pub fn resolve_outpath(
         panic!("No `%FILENAME%` variable in recipe's `[misc] format:` key");
     }
 
-    let rc_container = recipe
-        .get("output")
-        .expect("Failed getting [output] from recipe")
-        .get("container")
-        .expect("Failed getting `[output] container:` from recipe")
-        .trim();
+    let rc_container = recipe.get("output", "container").trim().to_owned();
+    // .expect("Failed getting [output] from recipe")
+    // .get("container")
+    // .expect("Failed getting `[output] container:` from recipe")
+    // .trim();
 
     let container: String = if rc_container.is_empty() {
         println!("Defaulting output extension to .MP4");
@@ -216,7 +215,6 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
             let timecodes: Vec<Timecodes> = cuts.get(vid).expect("Failed").to_owned();
 
             videos.push((vid.clone(), probe, Some(timecodes)));
-
         }
     }
 

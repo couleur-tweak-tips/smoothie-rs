@@ -1,19 +1,90 @@
 use crate::cli::Arguments;
+use std::collections::hash_map::Keys;
 use std::collections::HashMap;
-
-use std::path::Path;
-use std::path::PathBuf;
-use std::{env, fs};
-
+use std::env;
+use std::fs::File;
 use std::io::Read;
+use std::path::{Path, PathBuf};
 
-pub type Recipe = HashMap<String, HashMap<String, String>>;
+#[derive(Debug, Clone)]
+pub struct Recipe {
+    data: HashMap<String, HashMap<String, String>>,
+}
+
+impl Recipe {
+    pub fn new() -> Recipe {
+        Recipe {
+            data: HashMap::new(),
+        }
+    }
+
+    pub fn contains_key(&mut self, key: &str) -> bool {
+        self.data.contains_key(key)
+    }
+
+    pub fn keys(&mut self) -> Keys<'_, String, HashMap<String, String>> {
+        self.data.keys()
+    }
+
+    pub fn insert_section(&mut self, section: String, data: HashMap<String, String>) {
+        self.data.insert(section, data);
+    }
+    // that lil boilerplate worth the error handling
+    pub fn insert_value(&mut self, section: &str, key: String, value: String) {
+        if !self.data.contains_key(section) {
+            self.data.insert(section.parse().unwrap(), HashMap::new());
+        }
+
+        match self.data.get_mut(section) {
+            Some(section) => {
+                section.insert(key, value);
+            }
+            None => panic!("Recipe: section not found: {section}"),
+        }
+    }
+
+    pub fn get_bool(&mut self, section: &str, key: &str) -> bool {
+        let pos = vec!["yes", "ye", "y", "on", "enabled", "1"];
+        let neg = vec!["no", "na", "n", "off", "disabled", "0"];
+
+        let bool_str = match self.data.get(section) {
+            Some(section) => match section.get(key) {
+                Some(value) => value,
+                None => panic!("Recipe: [{section:?}] {key:?}:"),
+            },
+            None => panic!("Recipe section not found: `{section}`"),
+        };
+
+        match bool_str {
+            _ if pos.contains(&bool_str.to_lowercase().as_str()) => true,
+            _ if neg.contains(&bool_str.to_lowercase().as_str()) => false,
+            _ => panic!("Unknown boolean (true/false value): {bool_str:?}"),
+        }
+    }
+
+    pub fn get(&self, section: &str, key: &str) -> String {
+        match self.data.get(section) {
+            Some(section) => match section.get(key) {
+                Some(value) => value.to_owned(),
+                None => panic!("Recipe: [{section:?}] {key:?}:"),
+            },
+            None => panic!("Recipe section not found: `{section}`"),
+        }
+    }
+
+    pub fn get_section(&self, section: &str) -> &HashMap<String, String> {
+        match self.data.get(section) {
+            Some(section) => section,
+            None => panic!("Recipe section not found: `{section}`"),
+        }
+    }
+}
 
 pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
     assert!(ini.exists(), "Recipe at path `{ini:?}` does not exist");
-    println!("recipe: {ini:?}");
+    println!("Parsing: {}", ini.display());
 
-    let mut file = match fs::File::open(&ini) {
+    let mut file = match File::open(&ini) {
         Ok(file) => file,
         Err(e) => panic!("Error opening file: {e}"),
     };
@@ -58,7 +129,7 @@ pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
                     .to_string();
 
                 if !rc.contains_key(&cur_category) {
-                    rc.insert(cur_category.clone(), HashMap::new());
+                    rc.insert_section(cur_category.clone(), HashMap::new());
                 }
             }
 
@@ -72,9 +143,11 @@ pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
                     .split_once(':')
                     .expect("Recipe: Failed to split_once a key");
 
-                rc.get_mut(&cur_category)
-                    .expect("Failed to get section `{cur_category}`")
-                    .insert(key.trim().to_string(), value.trim().to_string());
+                rc.insert_value(
+                    &cur_category,
+                    key.trim().to_string(),
+                    value.trim().to_string(),
+                );
             }
             // forgot to put val into a comment!
             _ => panic!("Recipe: Failed to parse {cur:?}, line {round}"),
@@ -89,13 +162,13 @@ pub fn get_recipe(args: &Arguments) -> Recipe {
     };
 
     let bin_dir = match exe.parent() {
-        Some(bin_dir) => bin_dir,
+        Some(bin_dir) => bin_dir.parent().unwrap(),
         None => panic!("Could not resolve Smoothie's binary directory `{exe:?}`"),
     };
 
     let rc_path = bin_dir.join(&args.recipe);
 
-    let mut rc: Recipe = HashMap::new();
+    let mut rc: Recipe = Recipe::new();
 
     parse_recipe(Path::join(bin_dir, "defaults.ini"), &mut rc);
     parse_recipe(rc_path, &mut rc);
@@ -116,9 +189,7 @@ pub fn get_recipe(args: &Arguments) -> Recipe {
             let key = iter.next().expect("Failed unpacking key of --override");
             let value = iter.next().expect("Failed unpacking value of --override");
 
-            rc.get_mut(category)
-                .expect("Failed to get category from --override")
-                .insert(key.trim().to_string(), value.trim().to_string());
+            rc.insert_value(category, key.trim().to_string(), value.trim().to_string());
         }
     }
 

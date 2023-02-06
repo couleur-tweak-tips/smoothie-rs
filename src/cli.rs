@@ -1,5 +1,9 @@
 use clap::Parser;
 use std::{env, path::PathBuf, process::Command};
+use std::fs::File;
+use std::io::Read;
+
+
 /// Smoothen up your gameplay footage with Smoothie, yum!
 #[derive(Parser, Debug)]
 #[clap(about, long_about = "", arg_required_else_help = true)]
@@ -54,7 +58,7 @@ pub struct Arguments {
     pub json: Option<String>,
 
     /// New json is HashMap<Path, (start,fin)>, old is Vec<(PathBuf, start, fin)>
-    #[clap(long, default_value_t=false)]
+    #[clap(long, default_value_t = false)]
     pub old_json: bool,
 
     /// Join all cuts to a file, used with -json
@@ -73,7 +77,7 @@ pub struct Arguments {
         default_value_t = false,
         requires = "json",
         conflicts_with = "input",
-        conflicts_with = "trim",
+        conflicts_with = "trim"
     )]
     pub padding: bool,
 
@@ -112,7 +116,8 @@ pub struct Arguments {
     pub r#override: Option<Vec<String>>,
 }
 
-pub fn void_args() {
+pub fn setup_args() -> Arguments {
+
     if cfg!(debug_assertions) {
         color_eyre::install().expect("Failed setting up error handler");
     } else {
@@ -133,66 +138,107 @@ pub fn void_args() {
             rfd::MessageDialog::new()
                 .set_title("Smoothie crashed!")
                 .set_description(&format!(
-    r#"Error message:
-    {msg}
-    
-    Location in source:
-    {file}:{line}:{column}
-    
-    Arguments passed:
-    {:?}
-    
-    Note: If your PC is still going BRRR the rendering might still be ongoing :)
-    
-    If you'd like getting help take a screenshot of this message and your recipe and come over to discord.gg/CTT and make a post in #support
-                    "#,
-                    args
-                ))
+r#"Error message:
+{msg}
+
+Location in source:
+{file}:{line}:{column}
+
+Arguments passed:
+{args:?}
+
+Note: If your PC is still going BRRR the rendering might still be ongoing :)
+
+If you'd like getting help take a screenshot of this message and your recipe and come over to discord.gg/CTT and make a post in #support
+                    "#))
                 .set_level(rfd::MessageLevel::Error)
                 .show();
         }));
     }
 
-    let first_arg = match std::env::args().nth(1) {
+    let first_arg = match env::args().nth(1) {
         Some(arg) => arg,
-        None => return,
+        None => "".to_string(),
     };
+
 
     let current_exe = env::current_exe().expect("Could not determine exe");
     let current_exe_path = current_exe
         .parent()
-        .expect("Could not get folder of executable??");
+        .expect("Could not get directory of executable");
+
+    let current_exe_path_dir = current_exe_path
+        .parent()
+        .expect("Could not get directory of directory's executable??");
+
+    let last_args = current_exe_path_dir.join("last_args.txt");
+    if !last_args.exists() {
+        if File::create(&last_args).is_err() {
+            panic!("Failed creating last_args.txt at {current_exe_path_dir:?}")
+        };
+    }
 
     match first_arg.as_ref() {
         "rc" | "recipe" | "conf" | "config" => {
             let ini_path = current_exe_path.join("..").join("recipe.ini");
 
             if !ini_path.exists() {
-                panic!("Could not find recipe at {:?}", ini_path)
+                panic!("Could not find recipe at {ini_path:?}")
             }
 
-            println!("Opening recipe: {}", ini_path.to_str().unwrap());
-            open_file::open(ini_path.display().to_string(), None);
+            let ini_path = ini_path.canonicalize().unwrap().display().to_string();
+
+            // println!("Opening recipe: {}", ini_path);
+            open_file::open(ini_path, None);
+            std::process::exit(0);
         }
         "root" | "dir" | "folder" => {
-            println!("Opening directory");
             if cfg!(target_os = "windows") {
-                println!("Hi Windows!");
                 Command::new("explorer.exe")
                     .args([current_exe_path.parent().expect(
                         "Failed to get smoothie's parent directory, is it in a drive's root folder?",
                     )])
                     .output()
-                    .expect("failed to execute process");
+                    .expect("Failed to execute explorer process for dir");
             } else {
                 println!(
                     "The smoothie binary is located at {}",
                     current_exe_path.display()
                 );
             }
-        }
-        _ => return,
-    }
+            std::process::exit(0);
+        },
+        "-!!" | "!!" | "--rerun" => {
+            let mut file = match File::open(&last_args) {
+                Ok(file) => file,
+                Err(e) => panic!("Error opening last_args.txt: {e}"),
+            };
+            let mut content = String::new();
+            match file.read_to_string(&mut content) {
+                Ok(_) => (),
+                Err(e) => panic!("Error reading last_args.txt: {e}"),
+            };
 
-    std::process::exit(0);
+            let current_exe = &env::current_exe().expect("Could not determine exe").display().to_string();
+
+            let mut last_args_lines = content.lines().collect();
+            let mut final_args: Vec<&str> = vec![current_exe];
+            final_args.append(&mut last_args_lines);
+            // dbg!(&final_args);
+            // finished writing this at 1 am, it's bad code but it fucking works, deal with it or pr
+            match Arguments::try_parse_from(final_args) {
+                Ok(args) => args,
+                Err(e) => panic!("{e}"),
+            }
+        },
+        _ => {
+            let mut file = match File::open(&last_args) {
+                Ok(file) => file,
+                Err(e) => panic!("Error opening last_args.txt: {e}"),
+            };
+            let a=b"Hello, world!";
+            // file.write_all(b"Hello, world!").expect("Failed writing arguments to last_args.txt");
+            Arguments::parse()
+        },
+    }
 }

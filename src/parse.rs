@@ -1,42 +1,27 @@
 use crate::cli::Arguments;
 use crate::recipe::{parse_recipe, Recipe};
 use colored::Colorize;
-use std::collections::HashMap;
 use std::env::current_exe;
 
-pub fn _parse_bool(bool_str: &str) -> bool {
-    let pos = vec!["yes", "ye", "y", "on", "enabled", "1"];
-    let neg = vec!["no", "na", "n", "off", "disabled", "0"];
-
-    match bool_str {
-        _ if pos.contains(&&*bool_str.to_lowercase()) => true,
-        _ if neg.contains(&&*bool_str.to_lowercase()) => false,
-        _ => panic!("Unknown boolean (true/false value): {:?}", bool_str),
-    }
-}
-
-pub fn _parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
+pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
     let input_enc_args = if args.encargs.is_some() {
         args.encargs.clone().expect("Failed unwrapping --encargs")
     } else {
-        dbg!(&rc);
-        rc.get("encoding")
-            .expect("Failed getting [encoding] category from recipe")
-            .get("args")
-            .expect("Failed getting key `[encoding] args:` from recipe")
-            .clone()
+        rc.get("output", "enc args")
     };
 
-    let mut enc_arg_presets: Recipe = HashMap::new();
+    let mut enc_arg_presets: Recipe = Recipe::new();
     parse_recipe(
         current_exe()
             .expect("Failed getting exe path")
             .parent()
             .expect("Failed getting exe parent path")
+            .parent()
+            .unwrap()
             .join("encoding_presets.ini"),
         &mut enc_arg_presets,
     );
-    dbg!(&enc_arg_presets);
+    // dbg!(&enc_arg_presets);
 
     let mut codec = String::new(); // e.g H264, H265
     let mut ret = String::new();
@@ -48,7 +33,7 @@ pub fn _parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
         }
     }
 
-    dbg!(&codec_options);
+    // dbg!(&codec_options);
 
     for word in input_enc_args.split(' ') {
         if ret.chars().last().is_some()
@@ -62,11 +47,9 @@ pub fn _parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
         }
 
         if enc_arg_presets.contains_key("MACROS") {
-            let macros = enc_arg_presets
-                .get("MACROS")
-                .expect("Parsing error: failed getting MACROS in encoding presets");
+            let macros = enc_arg_presets.get_section("MACROS");
             if macros.contains_key(word) {
-                println!("Pushing {:?} as macro", word);
+                println!("Pushing {word:?} as macro");
                 ret.push_str(
                     macros
                         .get(word)
@@ -77,27 +60,25 @@ pub fn _parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
         }
 
         if !codec.is_empty() {
-            let codec_category = enc_arg_presets
-                .get(&*codec)
-                .expect("Parsing error: failed getting category from enc arg presets");
-            if enc_arg_presets.contains_key(&codec.to_uppercase()) {
-                println!("Pushing {:?} as an enc preset", word);
+            let codec_category = enc_arg_presets.get_section(&codec);
+            if enc_arg_presets.clone().contains_key(&codec.to_uppercase()) {
+                println!("Pushing {word:?} as an enc preset");
                 ret.push_str(
                     codec_category
-                        .get(word)
+                        .get(&*str::to_uppercase(word))
                         .expect("Parsing error: failed getting key from enc preset"),
                 )
             }
         } else if codec_options.contains(&word.to_string()) {
             for option in enc_arg_presets.keys() {
                 if option.contains(word) {
-                    println!("Found {:?} for {word}", option);
+                    println!("Found {option:?} for {word}");
                     codec = option.clone();
                 }
             }
-            // codec = word.to_uppercase().to_string();
+            // codec = word.to_lowercase().to_string();
         } else {
-            println!("Pushing {:?} as normal str", word);
+            println!("Pushing {word:?} as normal str");
             ret.push_str(word);
         }
     }
