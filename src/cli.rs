@@ -16,7 +16,7 @@ pub struct Arguments {
     #[clap(short, long, visible_alias = "out")]
     pub output: Option<String>,
 
-    /// Makes sm behave like an app instead of a CLI tool (e.g pause before exitting on an error)
+    /// Makes sm behave like an app instead of a CLI tool (e.g pause before exiting on an error)
     #[clap(short, long, default_value_t = false)]
     pub tui: bool,
 
@@ -208,17 +208,17 @@ If you'd like getting help take a screenshot of this message and your recipe and
         "-!!" | "!!" | "--rerun" | "--!!" => {
             let mut file = match File::open(&last_args) {
                 Ok(file) => file,
-                Err(e) => panic!("Error opening last_args.txt: {e}"),
+                Err(e) => panic!("Error opening last_args.txt: {}", e),
             };
             let mut content = String::new();
             match file.read_to_string(&mut content) {
                 Ok(_) => (),
-                Err(e) => panic!("Error reading last_args.txt: {e}"),
+                Err(e) => panic!("Error reading last_args.txt: {}", e),
             };
-            let mut last_args_lines: Vec<&str> = content.lines().collect();
+            let last_args_lines: Vec<&str> = content.lines().collect();
             match Arguments::try_parse_from(last_args_lines) {
                 Ok(args) => args,
-                Err(e) => panic!("{e}"),
+                Err(e) => panic!("{}", e),
             }
         }
         _ => {
@@ -228,7 +228,7 @@ If you'd like getting help take a screenshot of this message and your recipe and
             // };
             let mut file = match File::create(&mut last_args) {
                 Ok(file) => file,
-                Err(e) => panic!("Error opening last_args.txt: {e}"),
+                Err(e) => panic!("Error opening last_args.txt: {}", e),
             };
 
             // let len = env::args().len();
