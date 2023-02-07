@@ -4,9 +4,6 @@ extern crate clap;
 extern crate serde;
 extern crate serde_json;
 
-use clap::Parser;
-use std::env; // cli.rs
-
 // use color_eyre::owo_colors::OwoColorize;
 extern crate colored;
 extern crate ffprobe; // cli wrapper
@@ -18,14 +15,15 @@ extern crate num_rational;
 // in order of use
 mod cli;
 mod cmd;
+mod exec;
 mod parse;
 mod recipe;
 mod video;
 // mod exec;
 // mod output;
 
-use crate::{cli::Arguments, recipe::Recipe, video::Payload};
-use which::which;
+use crate::{cli::Arguments, cmd::SmCommand, recipe::Recipe, video::Payload};
+
 fn main() {
     if enable_ansi_support::enable_ansi_support().is_err() {
         println!("Failed enabling ANSI color support, expect broken colors!")
@@ -41,7 +39,7 @@ fn main() {
 
     let payloads: Vec<Payload> = video::resolve_input(&mut args, &recipe);
 
-    let _commands: Vec<(String, String)> = cmd::build_commands(args, payloads, recipe);
+    let _commands: Vec<SmCommand> = cmd::build_commands(args, payloads, recipe);
 
-    // exec::_smoothing(payloads);
+    exec::_smoothing(_commands);
 }
