@@ -6,9 +6,9 @@ use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Recipe {
-    data: HashMap<String, HashMap<String, String>>,
+    pub data: HashMap<String, HashMap<String, String>>,
 }
 
 impl Recipe {
@@ -43,7 +43,7 @@ impl Recipe {
         }
     }
 
-    pub fn get_bool(&mut self, section: &str, key: &str) -> bool {
+    pub fn _get_bool(&mut self, section: &str, key: &str) -> bool {
         let pos = vec!["yes", "ye", "y", "on", "enabled", "1"];
         let neg = vec!["no", "na", "n", "off", "disabled", "0"];
 
