@@ -12,16 +12,13 @@ extern crate ffprobe; // cli wrapper
 extern crate anyhow;
 extern crate num_rational;
 
-// in order of use
 mod cli;
 mod cmd;
 mod exec;
 mod parse;
 mod recipe;
-mod video;
 mod vapoursynth;
-// mod exec;
-// mod output;
+mod video;
 
 use crate::{cli::Arguments, cmd::SmCommand, recipe::Recipe, video::Payload};
 
