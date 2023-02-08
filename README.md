@@ -1,20 +1,21 @@
 > **Warning**
 >
-> As with a lot of projects, this one is also a WIP, expect broken code 👍
+> WIP, do not expect a working program 👍
 
 ## smoothie-rs
 
-Temporary repository hosting the code for Smoothie's future form: developped in rust 🦀.
+Temporary repository to write the code for Smoothie's future form: developed in rust 🦀.
 Thanks to yalter and anima for inspiration (though I'll try to copy as less code as possible).
 
 ### Roadmap
 
-- [X] input processing
-- [X] ``rc`` and `dir` args
+- [X] Input processing/validation
+- [X] ``rc`` and `dir` "void" args
+- [X] --rerun (`last_args.txt`)
 - [X] recipe parsing with defaults backup
-- [ ] [rustsynth](https://github.com/animafps/rustsynth) vs node processing
-- [ ] Output CLI processing (ffmpeg)
-- [ ] Refactor VEGAS Pre-Renderer & [suckless-cut](https://github.com/couleur-tweak-tips/suckless-cut) to support sm-rs
+- [ ] Option to pass a .vpy script instead of the internal api calls used (python runtime required)
+- [ ] Progress bar 
+- [ ] Refactor VEGAS Pre-Renderer script & [suckless-cut](https://github.com/couleur-tweak-tips/suckless-cut) to support sm-rs' ``--json``
 
 
 Using rustsynth would slim down Smoothie's bundle just to:

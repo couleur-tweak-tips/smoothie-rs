@@ -28,6 +28,10 @@ pub struct Arguments {
     #[clap(long, conflicts_with = "encargs")]
     pub peek: Option<i32>,
 
+    // /// Pass a .vpy script to evaluate nodes from
+    // #[clap(long)]
+    // pub vpy: Option<PathBuf>,
+
     // misc io
     /// Discard any audio tracks that'd pass to output
     #[clap(visible_alias = "an", long, default_value_t = false)]
