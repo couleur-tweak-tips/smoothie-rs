@@ -243,5 +243,9 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
         })
     }
 
+    if payloads.is_empty() {
+        panic!("No videos were passed to Smoothie")
+    }
+
     payloads
 }
