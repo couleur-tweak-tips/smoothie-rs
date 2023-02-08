@@ -171,7 +171,8 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
     let mut payloads: Vec<Payload> = vec![];
     let mut videos: Vec<(PathBuf, FfProbe, Option<Vec<Timecodes>>)> = vec![];
 
-    if args.input.is_empty() && args.json.is_none() && args.tui {
+    // Option 1: launched a shortcut that had --tui in args
+    if args.tui && args.input.is_empty() && args.json.is_none() {
         let input = FileDialog::new()
             .add_filter(
                 "Video file",
@@ -183,7 +184,6 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
             .set_directory("/")
             .pick_files();
 
-        println!("Added:");
         dbg!(&input);
 
         args.input = match input {
@@ -191,6 +191,8 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
             None => std::process::exit(0),
         };
     }
+
+    // Option 2: picked files in option 1 / used a shortcut Send to / the CLI
     if !args.input.is_empty() {
         // input is a vector of paths
         for vid in &args.input {
@@ -200,6 +202,8 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
             };
             videos.push((vid.clone(), probe, None));
         }
+
+    // Option 3: suckless-cut / Smoothie Pre-Render
     } else if args.json.is_some() {
         let cuts: HashMap<PathBuf, Vec<Timecodes>> =
             match serde_json::from_str(&args.json.clone().unwrap()) {
