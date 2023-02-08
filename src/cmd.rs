@@ -13,6 +13,8 @@ pub struct SmCommand {
     pub ff_args: Vec<String>,
     pub vs_path: String,
     pub vs_args: Vec<String>,
+    pub ffplay_path: Option<String>,
+    pub ffplay_args: Option<Vec<String>>,
 }
 
 pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -> Vec<SmCommand> {
@@ -140,33 +142,41 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
                         "1:a".to_owned(),
                     ]);
                 }
-
                 cur_cmd_arguments.push(payload.out_path.display().to_string());
-                /* fuck that.
-                 if recipe.get_bool("preview window", "enabled") {
-                     let mut ffplay_path = recipe.get("preview window", "process");
-                     if ffplay_path == "ffplay" {
-                         ffplay_path = which(ffplay_path)
-                             .expect("FFplay (previewer) is not installed and/or it's directory is not in PATH")
-                             .display()
-                             .to_string()
-                     };
-                     cur_cmd_arguments.push(format!(
-                         " | {ffplay_path:?} {}",
-                         recipe.get("miscellaneous", "ffplay options")
-                     ));
-                */
             }
         }
+
+        let (ffplay_path, ffplay_args) =
+            if recipe.get_bool("preview window", "enabled") && !args.tompv && args.peek.is_none() {
+                let mut ffplay_path = recipe.get("preview window", "process");
+                if ffplay_path == "ffplay" {
+                    ffplay_path = which(ffplay_path)
+                    .expect(
+                        "FFplay (previewer) is not installed and/or it's directory is not in PATH",
+                    )
+                    .display()
+                    .to_string()
+                };
+                let ffplay_args: Vec<String> = recipe
+                    .get("miscellaneous", "ffplay options")
+                    .split(" ")
+                    .map(String::from)
+                    .collect();
+
+                (Some(ffplay_path), Some(ffplay_args))
+            } else {
+                (None, None)
+            };
+
         ret.push(SmCommand {
             payload,
             ff_path: executable.clone(),
-            ff_args: cur_cmd_arguments.iter().map(|n| n.to_string()).collect(),
+            ff_args: cur_cmd_arguments,
             vs_path: vs_path.clone().display().to_string(),
-            vs_args: cur_vs_args.iter().map(|n| n.to_string()).collect(),
+            vs_args: cur_vs_args,
+            ffplay_path,
+            ffplay_args,
         });
-        // ret.push((payload, PathBuf::from(executable.clone()), cmd_arguments.clone()));
-        // println!("{cmd_arguments}");
     }
 
     ret
