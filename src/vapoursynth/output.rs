@@ -1,15 +1,27 @@
-use std::{process::ChildStdin, fs::File, sync::{Mutex, Condvar, Arc}, cmp, collections::HashMap, time::Instant, io::Write};
+use std::{
+    cmp,
+    collections::HashMap,
+    fs::File,
+    io::Write,
+    process::ChildStdin,
+    sync::{Arc, Condvar, Mutex},
+    time::Instant,
+};
 
-use anyhow::{bail, Error, anyhow, Context};
+use anyhow::{anyhow, bail, Context, Error};
 use num_rational::Ratio;
-use rustsynth::{frame::{FrameRef, Frame}, node::{Node, GetFrameError}, format::{ColorFamily, SampleType}};
+use rustsynth::{
+    format::{ColorFamily, SampleType},
+    frame::{Frame, FrameRef},
+    node::{GetFrameError, Node},
+};
 
 pub struct OutputParameters<'core> {
     node: Node<'core>,
     start_frame: usize,
     end_frame: usize,
     requests: usize,
-    y4m: bool
+    y4m: bool,
 }
 
 struct OutputState<'core, T: Write> {

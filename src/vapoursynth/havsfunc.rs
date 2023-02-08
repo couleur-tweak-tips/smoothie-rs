@@ -6,7 +6,7 @@ use rustsynth::{
     prelude::{Map, API},
 };
 
-pub fn change_fps<'elem ,'core: 'elem>(
+pub fn change_fps<'elem, 'core: 'elem>(
     api: API,
     core: CoreRef<'core>,
     clip: Node<'core>,
@@ -19,7 +19,8 @@ pub fn change_fps<'elem ,'core: 'elem>(
     let std = core.plugin_by_namespace("std").unwrap();
     let in_args = owned_map!(api, {"length": &(clip.video_info().unwrap().num_frames as f64 * factor).floor()}, {"fpsnum": &fpsnum}, {"fpsden": &fpsden});
     let blank = std.invoke("BlankClip", &in_args);
-    let in_args = owned_map!(api, {"eval": &adjust_frame}, {"clip": &blank.get_node("clip").unwrap()});
+    let in_args =
+        owned_map!(api, {"eval": &adjust_frame}, {"clip": &blank.get_node("clip").unwrap()});
     let eval = std.invoke("FrameEval", &in_args);
     eval.get_node("clip").unwrap()
 }

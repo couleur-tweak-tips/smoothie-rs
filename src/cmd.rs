@@ -15,11 +15,7 @@ pub struct SmCommand {
     pub vs_args: Vec<String>,
 }
 
-pub fn build_commands(
-    args: Arguments,
-    payloads: Vec<Payload>,
-    recipe: Recipe,
-) -> Vec<SmCommand> {
+pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -> Vec<SmCommand> {
     let executable: String = if args.tompv {
         which("mpv")
             .expect("MPV is not installed and/or it's directory is not in PATH")
@@ -59,9 +55,13 @@ pub fn build_commands(
     let mut cmd_arguments: Vec<String> = vec![];
     if args.tompv {
         cmd_arguments.push("-".to_string());
-    }else{
+    } else {
         cmd_arguments.append(
-            &mut recipe.get("miscellaneous", "ffmpeg options").split(" ").map(String::from).collect()
+            &mut recipe
+                .get("miscellaneous", "ffmpeg options")
+                .split(" ")
+                .map(String::from)
+                .collect(),
         );
     }
 
@@ -94,7 +94,10 @@ pub fn build_commands(
         ]);
     }
 
-    let mut enc_args: Vec<String> = parse_encoding_args(&args, &recipe).split(" ").map(String::from).collect();
+    let mut enc_args: Vec<String> = parse_encoding_args(&args, &recipe)
+        .split(" ")
+        .map(String::from)
+        .collect();
 
     // let mut ret: Vec<(Payload, PathBuf, String)> = vec![];
     let mut ret: Vec<SmCommand> = vec![];
@@ -108,25 +111,33 @@ pub fn build_commands(
         let mut cur_vs_args = vs_args.clone();
 
         cur_vs_args.append(&mut vec![
-            "--arg".to_owned(), format!("input_video={}", payload.in_path.display().to_string())
+            "--arg".to_owned(),
+            format!("input_video={}", payload.in_path.display().to_string()),
         ]);
 
         if args.tompv {
         } else {
             if args.tonull {
-                cur_cmd_arguments.append(
-                    &mut vec![
-                        "-i".to_owned(), payload.in_path.display().to_string(), "-f".to_owned(), "null".to_owned(), "NUL".to_owned()
-                    ]
-                );
+                cur_cmd_arguments.append(&mut vec![
+                    "-i".to_owned(),
+                    payload.in_path.display().to_string(),
+                    "-f".to_owned(),
+                    "null".to_owned(),
+                    "NUL".to_owned(),
+                ]);
                 // cur_cmd_arguments.push(format!(" -i {:?} -f null NUL ", payload.in_path));
-            } else if args.peek.is_some() {} else {
+            } else if args.peek.is_some() {
+            } else {
                 if args.stripaudio {
                     cur_cmd_arguments.append(&mut enc_args);
                 } else {
                     cur_cmd_arguments.append(&mut vec![
-                        "-i".to_owned(), format!("{}", payload.in_path.display().to_string()),
-                        "-map".to_owned(), "0:v".to_owned(), "-map".to_owned(), "1:a".to_owned()
+                        "-i".to_owned(),
+                        format!("{}", payload.in_path.display().to_string()),
+                        "-map".to_owned(),
+                        "0:v".to_owned(),
+                        "-map".to_owned(),
+                        "1:a".to_owned(),
                     ]);
                 }
                 cur_cmd_arguments.push(payload.out_path.display().to_string());
@@ -146,7 +157,6 @@ pub fn build_commands(
                      ));
                 */
             }
-
         }
         ret.push(SmCommand {
             payload,

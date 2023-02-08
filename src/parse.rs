@@ -4,9 +4,8 @@ use colored::Colorize;
 use std::env::current_exe;
 
 pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
-
     let input_enc_args = if args.encargs.is_some() {
-        return args.encargs.clone().expect("Failed unwrapping --encargs")
+        return args.encargs.clone().expect("Failed unwrapping --encargs");
     } else {
         rc.get("output", "enc args")
     };

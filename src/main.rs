@@ -18,8 +18,8 @@ mod cmd;
 mod exec;
 mod parse;
 mod recipe;
-mod video;
 mod vapoursynth;
+mod video;
 // mod exec;
 // mod output;
 
