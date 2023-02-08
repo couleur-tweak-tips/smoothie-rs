@@ -1,0 +1,3 @@
+[submodule "rustsynth"]
+	path = rustsynth
+	url = https://github.com/animafps/rustsynth.git

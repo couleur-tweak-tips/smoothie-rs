@@ -19,6 +19,7 @@ mod exec;
 mod parse;
 mod recipe;
 mod video;
+mod vapoursynth;
 // mod exec;
 // mod output;
 
