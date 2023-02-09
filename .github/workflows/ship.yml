@@ -36,7 +36,7 @@ jobs:
         $env:VAPOURSYNTH_LIB_DIR=(Get-Item ./vapoursynth/sdk/lib64/).FullName
 
         mkdir ./smoothie-rs-artifact/bin/
-        cargo build --release --features pcre2
+        cargo build --release
         mv ./target/release/smoothie-rs.exe ./smoothie-rs-artifact/bin/
         mv ./target/*.ini ./smoothie-rs-artifact/
 
