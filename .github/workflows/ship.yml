@@ -1,0 +1,44 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [windows-2019]
+    
+    steps:
+    - uses: actions/checkout@v3
+    - name: Ship
+      shell: pwsh
+      run: |
+        git submodule update --init
+        cd ./rustsynth/rustsynth-sys/
+        git submodule update --init
+        cd ../../
+
+        mkdir ./smoothie-rs-artifact/bin/
+        cargo build --release
+        mv ./target/release/smoothie-rs.exe ./ship/bin/
+        mv ./target/*.ini ./smoothie-rs-artifact/
+
+        curl -s -o vs.7z -L https://github.com/AmusementClub/vapoursynth-classic/releases/download/R57.A8/release-x64.zip
+        'msvcp140.dll','vcruntime140_1.dll', 'vcruntime140.dll','VapourSynth.dll' | ForEach-Object {
+          7z e vs.7z -osmoothie-rs-artifact/bin/ $PSItem
+        }
+        set-content ./smoothie-rs-artifact/launch.cmd -value '@echo off & cd /D "%~dp0" & .\bin\smoothie-rs.exe --tui & pause'
+        7z a -t7z -mx=5 artifact.zip ./smoothie-rs-artifact/
+    - uses: actions/upload-artifact@v3
+      with:
+        name: smoothie-rs-bin-windows
+        path: artifact.zip
