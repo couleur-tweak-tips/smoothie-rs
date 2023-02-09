@@ -14,7 +14,7 @@ rand = "0.8.5"  # randomly choose from fruits for suffix
 rfd = "0.11.0"  # open file dialog
 which = "4.4.0" # Get-Command / where.exe / which alternative
 # rustsynth = "0.2.1" # wrapper for VapourSynth.dll
-rustsynth = {path = "./rustsynth/rustsynth/"}
+rustsynth = {git = "https://github.com/animafps/rustsynth"}
 
 # json stuff
 serde = "1.0.152" 
@@ -32,24 +32,11 @@ bindgen = "0.64.0"
 
 [build-dependencies]
 winres = "0.1" # give the exe an icon
-cc = "1.0.79"
+cc = "1.0.79"  # for /src/windows.c
 
-# win32, mainly used for to move the tui console to a corner
-[dependencies.windows]
-version = "0.44.0"
-features = [
-    "Win32_UI_HiDpi", 
-    "Win32_System_Console", 
-    "Win32_Foundation", 
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_Graphics_Gdi",
-    "Win32_UI_Controls_Dialogs"
-    ]
-
-# for myself, uncommenting when building for release
-
- [profile.release]
- strip = true
- opt-level = "s"
- lto = true
- codegen-units = 1
+# --release make smol
+[profile.release]
+strip = true
+opt-level = "s"
+lto = true
+codegen-units = 1
