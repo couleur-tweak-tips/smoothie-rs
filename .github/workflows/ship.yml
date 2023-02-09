@@ -25,9 +25,7 @@ jobs:
       with:
         msystem: UCRT64
         update: true
-    - name: install clang
-      shell: msys2 {0}
-      run: pacman -S  mingw64/mingw-w64-x86_64-clang
+        install: mingw-w64-clang-x86_64-clang
     - name: Ship
       shell: pwsh
       run: |
