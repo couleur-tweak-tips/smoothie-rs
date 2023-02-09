@@ -12,7 +12,6 @@ extern crate ffprobe; // cli wrapper
 extern crate anyhow;
 extern crate num_rational;
 
-// in order of use
 mod cli;
 mod cmd;
 mod exec;

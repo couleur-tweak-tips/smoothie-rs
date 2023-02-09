@@ -43,7 +43,7 @@ impl Recipe {
         }
     }
 
-    pub fn _get_bool(&mut self, section: &str, key: &str) -> bool {
+    pub fn get_bool(&self, section: &str, key: &str) -> bool {
         let pos = vec!["yes", "ye", "y", "on", "enabled", "1"];
         let neg = vec!["no", "na", "n", "off", "disabled", "0"];
 
