@@ -17,11 +17,11 @@ use rustsynth::{
 };
 
 pub struct OutputParameters<'core> {
-    node: Node<'core>,
-    start_frame: usize,
-    end_frame: usize,
-    requests: usize,
-    y4m: bool,
+    pub node: Node<'core>,
+    pub start_frame: usize,
+    pub end_frame: usize,
+    pub requests: usize,
+    pub y4m: bool,
 }
 
 struct OutputState<'core, T: Write> {
