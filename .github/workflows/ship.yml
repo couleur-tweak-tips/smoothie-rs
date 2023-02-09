@@ -34,7 +34,7 @@ jobs:
         $env:VAPOURSYNTH_LIB_DIR=(Get-Item ./vapoursynth/sdk/lib64/).FullName
 
         mkdir ./smoothie-rs-artifact/bin/
-        C:\msys64\usr\bin\bash -lc "cargo build --release"
+        cargo build --release --target x86_64-pc-windows-gnu
         mv ./target/release/smoothie-rs.exe ./ship/bin/
         mv ./target/*.ini ./smoothie-rs-artifact/
 
