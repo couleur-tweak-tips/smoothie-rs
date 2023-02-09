@@ -88,7 +88,7 @@ pub fn resolve_outpath(
     }
 
     #[rustfmt::skip]
-        let fruits: Vec<&str> = [
+    let fruits: Vec<&str> = [
         "Berry",      "Cherry",   "Cranberry",   "Coconut",   "Kiwi",
         "Avocado",    "Durian",   "Lemon",       "Fig",       "Lime",
         "Mirabelle",  "Banana",   "Pineapple",   "Pitaya",    "Blueberry",
@@ -195,12 +195,16 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
     // Option 2: picked files in option 1 / used a shortcut Send to / the CLI
     if !args.input.is_empty() {
         // input is a vector of paths
-        for vid in &args.input {
+        for vid in &mut args.input {
             let probe = match probe_video(vid) {
                 Some(probe) => probe,
                 None => continue, // filtered out
             };
-            videos.push((vid.clone(), probe, None));
+            videos.push((
+                vid.canonicalize().expect("Failed getting full input file path"),
+                probe,
+                None,
+            ));
         }
 
     // Option 3: suckless-cut / Smoothie Pre-Render
