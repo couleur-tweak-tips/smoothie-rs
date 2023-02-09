@@ -1,3 +1,4 @@
+extern crate cc;
 extern crate winres;
 
 fn main() {
@@ -5,5 +6,9 @@ fn main() {
         let mut res = winres::WindowsResource::new();
         res.set_icon("./src/smoothie.ico");
         res.compile().expect("Failed compiling exe icon");
+
+        cc::Build::new()
+            .file("./src/window.c")
+            .compile("topito_window.a");
     }
 }
