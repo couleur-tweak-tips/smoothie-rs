@@ -19,16 +19,17 @@ jobs:
     
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - uses: msys2/setup-msys2@v2
+      with:
+        msystem: CLANG64
     - name: Ship
       shell: pwsh
       run: |
-        git submodule update --init
-        cd ./rustsynth/rustsynth-sys/
-        git submodule update --init
-        cd ../../
-
         curl -s -o vs.7z -L https://github.com/AmusementClub/vapoursynth-classic/releases/download/R57.A8/release-x64.zip
-        7z x .\vs.7z -o"\Program Files\VapourSynth"
+        7z x .\vs.7z -ovapoursynth
+        $env:VAPOURSYNTH_LIB_DIR=(Get-Item ./vapoursynth).FullName
 
         mkdir ./smoothie-rs-artifact/bin/
         cargo build --release
