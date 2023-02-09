@@ -36,16 +36,18 @@ jobs:
       run: |
         curl -s -o vs.7z -L https://github.com/AmusementClub/vapoursynth-classic/releases/download/R57.A8/release-x64.zip
         7z x .\vs.7z -ovapoursynth
-        $env:VAPOURSYNTH_LIB_DIR=(Get-Item ./vapoursynth/sdk/lib64/).FullName
+        $env:VAPOURSYNTH_LIB_DIR=(Get-Item ./vapoursynth).FullName
 
         mkdir ./smoothie-rs-artifact/bin/
         cargo build --release
         mv ./target/release/smoothie-rs.exe ./smoothie-rs-artifact/bin/
         mv ./target/*.ini ./smoothie-rs-artifact/
 
+        mv ./vapoursynth64/** ./smoothie-rs/artifact
+
         
-        'msvcp140.dll','vcruntime140_1.dll', 'vcruntime140.dll','VapourSynth.dll' | ForEach-Object {
-          7z e vs.7z -osmoothie-rs-artifact/bin/ $PSItem
+        'msvcp140.dll','vcruntime140_1.dll', 'vcruntime140.dll','VapourSynth.dll', 'portable.vs' | ForEach-Object {
+          7z e vs.7z -o smoothie-rs-artifact/bin/ $PSItem
         }
         
 
