@@ -36,6 +36,8 @@ jobs:
         'msvcp140.dll','vcruntime140_1.dll', 'vcruntime140.dll','VapourSynth.dll' | ForEach-Object {
           7z e vs.7z -osmoothie-rs-artifact/bin/ $PSItem
         }
+        7z x .\vs.7z -o"\Program Files\VapourSynth"
+
         set-content ./smoothie-rs-artifact/launch.cmd -value '@echo off & cd /D "%~dp0" & .\bin\smoothie-rs.exe --tui & pause'
         7z a -t7z -mx=5 artifact.zip ./smoothie-rs-artifact/
     - uses: actions/upload-artifact@v3
