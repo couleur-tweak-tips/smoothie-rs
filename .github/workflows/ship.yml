@@ -22,6 +22,7 @@ jobs:
       with:
         submodules: recursive
     - name: install clang
+      shell: msys2
       run: pacman -S  mingw64/mingw-w64-x86_64-clang
     - name: Ship
       shell: pwsh
