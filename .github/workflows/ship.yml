@@ -26,6 +26,8 @@ jobs:
         msystem: UCRT64
         update: true
         install: mingw-w64-clang-x86_64-clang
+    - name: Set LIBCLANG_PATH
+      run: echo "LIBCLANG_PATH=$((gcm clang).source -replace "clang.exe")" >> $env:GITHUB_ENV
     - name: Ship
       shell: pwsh
       run: |
@@ -34,7 +36,7 @@ jobs:
         $env:VAPOURSYNTH_LIB_DIR=(Get-Item ./vapoursynth/sdk/lib64/).FullName
 
         mkdir ./smoothie-rs-artifact/bin/
-        cargo build --release --target x86_64-pc-windows-gnu
+        cargo build --release
         mv ./target/release/smoothie-rs.exe ./ship/bin/
         mv ./target/*.ini ./smoothie-rs-artifact/
 
