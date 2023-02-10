@@ -1,6 +1,9 @@
-use rustsynth::{prelude::*, api, owned_map, node::Node};
+use rustsynth::{api, node::Node, owned_map, prelude::*};
 
-use crate::{cmd::SmCommand, vapoursynth::output::{output, OutputParameters}};
+use crate::{
+    cmd::SmCommand,
+    vapoursynth::output::{output, OutputParameters},
+};
 use std::process::{Command, ExitStatus, Stdio};
 
 fn process(cmd: SmCommand, out_params: OutputParameters) -> ExitStatus {
@@ -45,6 +48,15 @@ pub fn _smoothing(commands: Vec<SmCommand>) {
         let args = owned_map!(api, {"source": &command.payload.in_path.to_str().unwrap().to_string()}, {"cache": &1}, {"prefer_hw": &3});
         let clip: Node = lsmash.invoke("LWLibavSource", &args).get("clip").unwrap();
         let end_frame = (clip.video_info().unwrap().num_frames - 1) as usize;
-        process(command, OutputParameters {node: clip, start_frame: 0, end_frame , requests: core.info().num_threads, y4m: true });
+        process(
+            command,
+            OutputParameters {
+                node: clip,
+                start_frame: 0,
+                end_frame,
+                requests: core.info().num_threads,
+                y4m: true,
+            },
+        );
     }
 }

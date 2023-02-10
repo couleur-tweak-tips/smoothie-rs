@@ -201,7 +201,8 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
                 None => continue, // filtered out
             };
             videos.push((
-                vid.canonicalize().expect("Failed getting full input file path"),
+                vid.canonicalize()
+                    .expect("Failed getting full input file path"),
                 probe,
                 None,
             ));

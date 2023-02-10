@@ -27,7 +27,6 @@ mod video;
 
 use crate::{cli::Arguments, cmd::SmCommand, recipe::Recipe, video::Payload};
 
-
 use std::os::raw::c_int;
 
 extern "C" {
