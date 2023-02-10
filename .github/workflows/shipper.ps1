@@ -18,7 +18,7 @@ function Get-Release{
 
 mkdir ./smoothie-rs-artifact/bin/vapoursynth64/
 
-Push-Location ./smoothie-rs-artifact/bin/vapoursynth64/
+Push-Location ./smoothie-rs-artifact/bin/vapoursynth64/plugins/
 
 $Deps = @{
     'svp.7z'     = 'https://github.com/bjaan/smoothvideo/blob/main/SVPflow_LastGoodVersions.7z?raw=true'
@@ -43,10 +43,12 @@ ForEach ($Dep in [Array]$Deps.Keys){
     $File = Get-Item $Dep
     Set-Variable -Name $File.BaseName -Value $File.FullName
 }
-"Unzipping SVPFlow"
+
+"Extracting SVPFlow"
 7z e -y $svp -r svpflow1_vs.dll svpflow2_vs.dll . | Out-Null
+
 $akexpr, $lsmash, $mvtools, $rife, $remap | ForEach-Object {
-    "Unzipping $($_ | Split-Path)"
+    "Extracting $($_ | Split-Path -Leaf)"
     7z x $_ | Out-Null
 }
 

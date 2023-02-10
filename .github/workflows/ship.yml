@@ -13,25 +13,39 @@ jobs:
 
     strategy:
       matrix:
-        os: [windows-2019]
+        os: [windows-2022]
     
     steps:
+
     - uses: actions/checkout@v3
       with:
         submodules: recursive
+
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
+
     - uses: msys2/setup-msys2@v2
       with:
         msystem: UCRT64
         update: true
         install: mingw-w64-clang-x86_64-clang
+
     - name: Set LIBCLANG_PATH
       run: echo "LIBCLANG_PATH=$((gcm clang).source -replace "clang.exe")" >> $env:GITHUB_ENV
+
     - name: Ship
       shell: pwsh
       run: ./.github/workflows/shipper.ps1
+
+#    - name: Compress binaries
+#      uses: svenstaro/upx-action@v2
+#      with:
+#        args: -9
+#        files: |
+#          smoothie-rs-artifact/bin/smoothie*.exe
+#          smoothie-rs-artifact/bin/vapoursynth64/plugins/*.dll
+
     - uses: actions/upload-artifact@v3
       with:
         name: smoothie-rs-bin-windows
