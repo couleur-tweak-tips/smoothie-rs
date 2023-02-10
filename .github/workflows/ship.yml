@@ -3,8 +3,6 @@ name: Rust
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -34,6 +32,10 @@ jobs:
     - name: Ship
       shell: pwsh
       run: |
+        pip install meson
+        curl -s -o lsmash.7z -L https://github.com/HomeOfAviSynthPlusEvolution/L-SMASH-Works/releases/download/20221109/L-SMASH-Works-20221109.7z
+        7z x .\lsmash.7z -o lsmash
+
         curl -s -o vs.7z -L https://github.com/AmusementClub/vapoursynth-classic/releases/download/R57.A8/release-x64.zip
         7z x .\vs.7z -ovapoursynth
         $env:VAPOURSYNTH_LIB_DIR=(Get-Item ./vapoursynth/sdk/lib64/).FullName
@@ -43,8 +45,8 @@ jobs:
         mv ./target/release/smoothie-rs.exe ./smoothie-rs-artifact/bin/
         mv ./target/*.ini ./smoothie-rs-artifact/
 
-        mv ./vapoursynth64/** ./smoothie-rs/artifact
-
+        mv ./vapoursynth/vapoursynth64/** ./smoothie-rs/artifact/bin/vapoursynth64/
+        mv ./lsmash/x64/* ./smoothie-rs/artifact/bin/vapoursynth64/plugins/
         
         'msvcp140.dll','vcruntime140_1.dll', 'vcruntime140.dll','VapourSynth.dll', 'portable.vs' | ForEach-Object {
           7z e vs.7z -o smoothie-rs-artifact/bin/ $PSItem

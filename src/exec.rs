@@ -40,7 +40,7 @@ fn process(cmd: SmCommand, out_params: OutputParameters) -> ExitStatus {
 pub fn _smoothing(commands: Vec<SmCommand>) {
     let api = API::get().unwrap();
     let core = api.create_core(api::CoreCreationFlags::NONE);
-    let lsmash = core.plugin_by_id("lsmash").unwrap();
+    let lsmash = core.plugin_by_id("lsmas").unwrap();
     for command in commands {
         let args = owned_map!(api, {"source": &command.payload.in_path.to_str().unwrap().to_string()}, {"cache": &1}, {"prefer_hw": &3});
         let clip: Node = lsmash.invoke("LWLibavSource", &args).get("clip").unwrap();
