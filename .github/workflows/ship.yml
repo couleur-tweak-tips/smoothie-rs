@@ -32,9 +32,8 @@ jobs:
     - name: Ship
       shell: pwsh
       run: |
-        pip install meson
         curl -s -o lsmash.7z -L https://github.com/HomeOfAviSynthPlusEvolution/L-SMASH-Works/releases/download/20221109/L-SMASH-Works-20221109.7z
-        7z x .\lsmash.7z -o lsmash
+        7z x .\lsmash.7z -olsmash
 
         curl -s -o vs.7z -L https://github.com/AmusementClub/vapoursynth-classic/releases/download/R57.A8/release-x64.zip
         7z x .\vs.7z -ovapoursynth
@@ -47,12 +46,11 @@ jobs:
 
         mv ./vapoursynth/vapoursynth64/** ./smoothie-rs/artifact/bin/vapoursynth64/
         mv ./lsmash/x64/* ./smoothie-rs/artifact/bin/vapoursynth64/plugins/
-        
+
         'msvcp140.dll','vcruntime140_1.dll', 'vcruntime140.dll','VapourSynth.dll', 'portable.vs' | ForEach-Object {
           7z e vs.7z -o smoothie-rs-artifact/bin/ $PSItem
         }
         
-
         set-content ./smoothie-rs-artifact/launch.cmd -value '@echo off & cd /D "%~dp0" & .\bin\smoothie-rs.exe --tui & pause'
         7z a -t7z -mx=5 artifact.zip ./smoothie-rs-artifact/
     - uses: actions/upload-artifact@v3
