@@ -1,7 +1,11 @@
 use crate::cli::Arguments;
 use crate::recipe::{parse_recipe, Recipe};
+use color_eyre::owo_colors::OwoColorize;
 use colored::Colorize;
+use serde::Deserialize;
 use std::env::current_exe;
+use std::time::Duration;
+use ureq::{Agent, Error as uReqError};
 
 pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
     let input_enc_args = if args.encargs.is_some() {
@@ -86,9 +90,6 @@ pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
     ret
 }
 
-// use crate::exec::_smoothing;
-use serde::Deserialize;
-
 // static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 #[derive(Debug, Deserialize)]
@@ -97,23 +98,15 @@ pub struct Release {
     pub name: String,
 }
 
-// use reqwest::Error;
-// use colored::*;
-
-use std::time::Duration;
-use ureq::Agent;
-
-pub fn ping_github() -> Result<Release, ()> {
+pub fn ping_github() -> Result<Release, uReqError> {
     let agent: Agent = ureq::AgentBuilder::new()
         .timeout_read(Duration::from_secs(5))
         .timeout_write(Duration::from_secs(5))
         .build();
     let release: Release = agent
         .get("https://api.github.com/repos/couleur-tweak-tips/smoothie/releases/latest")
-        .call()
-        .expect("Failed calling update")
-        .into_json()
-        .expect("Failed parsing JSON");
+        .call()?
+        .into_json()?;
 
     Ok(release)
 }
@@ -131,7 +124,11 @@ pub fn parse_update() {
             }
         }
         Err(e) => {
-            println!("Update: Failed checking for a new update, discarding.. {e:?}");
+            println!(
+                "{}",
+                format!("Update: Failed checking for a new update, discarding.. {e}")
+                    .bright_black()
+            );
         }
     }
 }
