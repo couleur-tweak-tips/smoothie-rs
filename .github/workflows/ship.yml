@@ -44,7 +44,7 @@ jobs:
         mv ./target/release/smoothie-rs.exe ./smoothie-rs-artifact/bin/
         mv ./target/*.ini ./smoothie-rs-artifact/
 
-        mv ./vapoursynth/vapoursynth64/** ./smoothie-rs/artifact/bin/vapoursynth64/
+        mv ./vapoursynth/vapoursynth64/* ./smoothie-rs/artifact/bin/vapoursynth64/
         mv ./lsmash/x64/* ./smoothie-rs/artifact/bin/vapoursynth64/plugins/
 
         'msvcp140.dll','vcruntime140_1.dll', 'vcruntime140.dll','VapourSynth.dll', 'portable.vs' | ForEach-Object {
