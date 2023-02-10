@@ -1,19 +1,14 @@
-use crate::cmd::SmCommand;
+use rustsynth::{prelude::*, api, owned_map, node::Node};
+
+use crate::{cmd::SmCommand, vapoursynth::output::{output, OutputParameters}};
 use std::process::{Command, ExitStatus, Stdio};
 
-fn process(cmd: SmCommand) -> ExitStatus {
+fn process(cmd: SmCommand, out_params: OutputParameters) -> ExitStatus {
     dbg!(&cmd);
 
-    let vs = Command::new(cmd.vs_path)
-        .args(cmd.vs_args)
-        .stdout(Stdio::piped())
-        // .stderr(Stdio::piped())
-        .spawn()
-        .expect("Could not start VapourSynth");
-
-    let ff = Command::new(cmd.ff_path)
+    let mut ff = Command::new(cmd.ff_path)
         .args(cmd.ff_args)
-        .stdin(Stdio::from(vs.stdout.expect("Could not pipe to FFmpeg")))
+        .stdin(Stdio::piped())
         .stdout(if cmd.ffplay_path.is_some() {
             Stdio::piped()
         } else {
@@ -21,6 +16,8 @@ fn process(cmd: SmCommand) -> ExitStatus {
         })
         .spawn()
         .expect("Could not start FFmpeg");
+
+    let vapoursynth = output(ff.stdin.take().unwrap(), None, out_params);
 
     if cmd.ffplay_path.is_some() {
         let ffplay = Command::new(cmd.ffplay_path.unwrap())
@@ -41,7 +38,13 @@ fn process(cmd: SmCommand) -> ExitStatus {
 }
 
 pub fn _smoothing(commands: Vec<SmCommand>) {
+    let api = API::get().unwrap();
+    let core = api.create_core(api::CoreCreationFlags::NONE);
+    let lsmash = core.plugin_by_id("lsmas").unwrap();
     for command in commands {
-        process(command);
+        let args = owned_map!(api, {"source": &command.payload.in_path.to_str().unwrap().to_string()}, {"cache": &1}, {"prefer_hw": &3});
+        let clip: Node = lsmash.invoke("LWLibavSource", &args).get("clip").unwrap();
+        let end_frame = (clip.video_info().unwrap().num_frames - 1) as usize;
+        process(command, OutputParameters {node: clip, start_frame: 0, end_frame , requests: core.info().num_threads, y4m: true });
     }
 }

@@ -22,6 +22,8 @@ mod parse;
 mod recipe;
 mod vapoursynth;
 mod video;
+// mod exec;
+// mod output;
 
 use crate::{cli::Arguments, cmd::SmCommand, recipe::Recipe, video::Payload};
 

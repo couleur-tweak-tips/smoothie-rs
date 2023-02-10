@@ -1,4 +1,4 @@
-use std::env::current_exe;
+use std::collections::HashMap;
 use which::which;
 
 use crate::cli::Arguments;
@@ -10,9 +10,8 @@ use crate::video::Payload;
 pub struct SmCommand {
     pub payload: Payload,
     pub ff_path: String,
+    pub rc_data: HashMap<String, HashMap<String, String>>,
     pub ff_args: Vec<String>,
-    pub vs_path: String,
-    pub vs_args: Vec<String>,
     pub ffplay_path: Option<String>,
     pub ffplay_args: Option<Vec<String>>,
 }
@@ -35,25 +34,6 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
         }
     };
 
-    let vs_path = if cfg!(target_os = "windows") {
-        let included = current_exe()
-            .expect("Failed getting current exe path")
-            .parent()
-            .expect("Failed getting exe path parent")
-            .join("VapourSynth\\vspipe.exe");
-
-        if included.exists() {
-            included
-        } else {
-            println!(
-                "Embedded VapourSynth environment not found, falling back to VSPipe.exe in path.."
-            );
-            which("vspipe").expect("VapourSynth's vspipe is not installed and/or is not in PATH")
-        }
-    } else {
-        which("vspipe").expect("VapourSynth's vspipe is not installed and/or is not in PATH")
-    };
-
     let mut cmd_arguments: Vec<String> = vec![];
     if args.tompv {
         cmd_arguments.push("-".to_string());
@@ -65,35 +45,6 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
                 .map(String::from)
                 .collect(),
         );
-    }
-
-    let vitamix = current_exe()
-        .expect("Failed getting current exe path")
-        .parent()
-        .expect("Failed getting exe path parent")
-        .parent()
-        .expect("Failed getting exe path parent's path parent")
-        .join("sm-py\\vitamix.vpy");
-
-    let rc_string =
-        serde_json::to_string(&recipe.data).expect("Failed serializing recipe (to pass to VSPipe)");
-
-    let mut vs_args: Vec<String> = vec![
-        vitamix.display().to_string(),
-        "--container".to_owned(),
-        "y4m".to_owned(),
-        "-".to_owned(),
-        "--arg".to_owned(),
-        format!("rc={rc_string}"),
-    ];
-
-    if args.peek.is_some() {
-        vs_args.append(&mut vec![
-            "--start".to_owned(),
-            format!("{}", args.peek.unwrap()),
-            "--end".to_owned(),
-            format!("{}", args.peek.unwrap()),
-        ]);
     }
 
     let mut enc_args: Vec<String> = parse_encoding_args(&args, &recipe)
@@ -110,12 +61,6 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
         }
 
         let mut cur_cmd_arguments = cmd_arguments.clone();
-        let mut cur_vs_args = vs_args.clone();
-
-        cur_vs_args.append(&mut vec![
-            "--arg".to_owned(),
-            format!("input_video={}", payload.in_path.display().to_string()),
-        ]);
 
         if args.tompv {
         } else {
@@ -172,8 +117,7 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
             payload,
             ff_path: executable.clone(),
             ff_args: cur_cmd_arguments,
-            vs_path: vs_path.clone().display().to_string(),
-            vs_args: cur_vs_args,
+            rc_data: recipe.data.clone(),
             ffplay_path,
             ffplay_args,
         });
