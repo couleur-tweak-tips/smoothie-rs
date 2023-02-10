@@ -7,6 +7,7 @@ fn main() {
         res.set_icon("./src/smoothie.ico");
         res.compile().expect("Failed compiling exe icon");
 
+        println!("cargo:rerun-if-changed=src/window.c");
         cc::Build::new()
             .file("./src/window.c")
             .compile("topito_window.a");
