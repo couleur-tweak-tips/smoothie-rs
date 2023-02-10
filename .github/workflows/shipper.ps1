@@ -16,7 +16,7 @@ function Get-Release{
     return $Latest
 }
 
-mkdir ./smoothie-rs-artifact/bin/vapoursynth64/
+mkdir ./smoothie-rs-artifact/bin/vapoursynth64/plugins/
 
 Push-Location ./smoothie-rs-artifact/bin/vapoursynth64/plugins/
 
