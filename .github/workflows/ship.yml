@@ -31,7 +31,7 @@ jobs:
       run: echo "LIBCLANG_PATH=$((gcm clang).source -replace "clang.exe")" >> $env:GITHUB_ENV
     - name: Ship
       shell: pwsh
-      run: ./shipper.ps1
+      run: ./.github/workflows/shipper.ps1
     - uses: actions/upload-artifact@v3
       with:
         name: smoothie-rs-bin-windows
