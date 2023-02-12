@@ -17,7 +17,6 @@ extern crate num_rational;
 
 mod cli;
 mod cmd;
-mod exec;
 mod parse;
 mod recipe;
 mod render;
@@ -99,6 +98,5 @@ fn main() {
 
     let commands: Vec<SmCommand> = cmd::build_commands(args, payloads, recipe);
 
-    // exec::_smoothing(_commands);
     render::vitamix(commands);
 }
