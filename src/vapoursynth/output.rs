@@ -321,7 +321,7 @@ pub fn output(
 
     let initial_requests = cmp::min(
         parameters.requests,
-        parameters.end_frame - parameters.start_frame + 1,
+        parameters.end_frame - parameters.start_frame,
     );
 
     let output_done_pair = (Mutex::new(false), Condvar::new());
@@ -330,7 +330,7 @@ pub fn output(
         timecodes_file,
         error: None,
         reorder_map: HashMap::new(),
-        last_requested_frame: parameters.start_frame + initial_requests - 1,
+        last_requested_frame: parameters.start_frame + initial_requests,
         next_output_frame: 0,
         current_timecode: Ratio::from_integer(0),
         callbacks_fired: 0,
