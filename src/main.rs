@@ -20,10 +20,9 @@ mod cmd;
 mod exec;
 mod parse;
 mod recipe;
+mod render;
 mod vapoursynth;
 mod video;
-// mod exec;
-// mod output;
 
 use crate::{cli::Arguments, cmd::SmCommand, recipe::Recipe, video::Payload};
 
@@ -98,7 +97,8 @@ fn main() {
 
     let payloads: Vec<Payload> = video::resolve_input(&mut args, &recipe);
 
-    let _commands: Vec<SmCommand> = cmd::build_commands(args, payloads, recipe);
+    let commands: Vec<SmCommand> = cmd::build_commands(args, payloads, recipe);
 
-    exec::_smoothing(_commands);
+    // exec::_smoothing(_commands);
+    render::vitamix(commands);
 }
