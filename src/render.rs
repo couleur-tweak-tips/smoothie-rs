@@ -42,6 +42,8 @@ pub fn vitamix(commands: Vec<SmCommand>) {
             .spawn()
             .expect("Failed spawning ffmpeg child");
 
+        let num_frames = clip.video_info().unwrap().num_frames as usize;
+
         output(
             ffmpeg.stdin.take().expect("Failed taking ffmpeg stdin"),
             None,
@@ -49,7 +51,7 @@ pub fn vitamix(commands: Vec<SmCommand>) {
                 y4m: true,
                 node: clip,
                 start_frame: 0,
-                end_frame: 0,
+                end_frame: num_frames,
                 requests: 0,
             },
         )
