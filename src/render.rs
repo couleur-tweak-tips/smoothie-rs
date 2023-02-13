@@ -37,7 +37,7 @@ pub fn vitamix(commands: Vec<SmCommand>) {
         let clip = libav_smashsource(cmd.payload.in_path, core, api);
 
         let mut ffmpeg = Command::new("ffmpeg")
-            .args(["-", "-loglevel", "trace"])
+            .args(cmd.ff_args)
             .stdin(Stdio::piped())
             .spawn()
             .expect("Failed spawning ffmpeg child");
@@ -51,8 +51,8 @@ pub fn vitamix(commands: Vec<SmCommand>) {
                 y4m: true,
                 node: clip,
                 start_frame: 0,
-                end_frame: num_frames,
-                requests: 0,
+                end_frame: num_frames - 1,
+                requests: core.info().num_threads,
             },
         )
         .expect("Failed outputting with output");
