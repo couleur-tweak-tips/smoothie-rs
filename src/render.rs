@@ -51,7 +51,7 @@ pub fn vitamix(commands: Vec<SmCommand>) {
                 y4m: true,
                 node: clip,
                 start_frame: 0,
-                end_frame: num_frames,
+                end_frame: num_frames - 1,
                 requests: core.info().num_threads,
             },
         )
