@@ -98,6 +98,7 @@ pub struct Release {
     pub name: String,
 }
 
+#[allow(dead_code)]
 pub fn ping_github() -> Result<Release, uReqError> {
     let agent: Agent = ureq::AgentBuilder::new()
         .timeout_read(Duration::from_secs(5))
@@ -111,6 +112,7 @@ pub fn ping_github() -> Result<Release, uReqError> {
     Ok(release)
 }
 
+#[allow(dead_code)]
 pub fn parse_update() {
     match ping_github() {
         Ok(body) => {
