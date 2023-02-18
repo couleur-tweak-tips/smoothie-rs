@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::env::current_exe;
 use which::which;
 
 use crate::cli::Arguments;
@@ -8,9 +8,11 @@ use crate::video::Payload;
 
 #[derive(Debug)]
 pub struct SmCommand {
+    pub vs_path: String,
+    pub vs_args: Vec<String>,
     pub payload: Payload,
     pub ff_path: String,
-    pub rc_data: HashMap<String, HashMap<String, String>>,
+    pub recipe: Recipe,
     pub ff_args: Vec<String>,
     pub ffplay_path: Option<String>,
     pub ffplay_args: Option<Vec<String>>,
@@ -50,12 +52,71 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
     let mut enc_args: Vec<String> = parse_encoding_args(&args, &recipe)
         .split(" ")
         .map(String::from)
+        .filter(|s| !s.is_empty())
         .collect();
 
-    // let mut ret: Vec<(Payload, PathBuf, String)> = vec![];
+    let cur_exe = current_exe().unwrap();
+    let cur_exe_dir = cur_exe.parent().unwrap();
+    let vs_bin = if cfg!(target_os = "windows") {
+        "vspipe.exe"
+    } else {
+        "vspipe"
+    };
+    let bin_dir_vspipe = cur_exe_dir.join(vs_bin);
+    let vspipe_in_path = which("vspipe");
+    let vs_path = (if bin_dir_vspipe.exists() {
+        println!("using vspipe that's in same directory as binary");
+        bin_dir_vspipe
+    } else if vspipe_in_path.is_ok() {
+        println!("Using VSPipe from PATH");
+        vspipe_in_path.unwrap()
+    } else {
+        panic!("vspipe binary in path/bin dir not found");
+    })
+    .display()
+    .to_string();
+
+    let vpy_path = if args.vpy.exists() {
+        args.vpy
+    } else if cur_exe_dir.parent().unwrap().join(&args.vpy).exists() {
+        cur_exe_dir.parent().unwrap().join(args.vpy)
+    } else {
+        panic!(
+            "jamba.vpy not found, expected {:?}",
+            cur_exe_dir.join(&args.vpy)
+        );
+    };
+
+    let rc_string = serde_json::to_string(&recipe).expect("Failed serializing recipe to JSON");
+
+    let vs_args = vec![
+        "--container".to_owned(),
+        "y4m".to_owned(),
+        "-".to_owned(),
+        vpy_path.display().to_string(),
+        "--arg".to_owned(),
+        format!("recipe={rc_string:?}"),
+    ];
+
     let mut ret: Vec<SmCommand> = vec![];
 
     for payload in payloads {
+        let mut cur_vs_args = vs_args.clone();
+
+        cur_vs_args.append(&mut vec![
+            "--arg".to_owned(),
+            format!("input_video={}", payload.in_path.display()),
+        ]);
+        if let Some(timecodes) = payload.timecodes.clone() {
+            let json_timecodes =
+                serde_json::to_string(&timecodes).expect("Failed serializing timecodes to JSON");
+
+            cur_vs_args.append(&mut vec![
+                "--arg".to_owned(),
+                format!("timecodes={json_timecodes:?}"),
+            ]);
+        }
+
         if payload.in_path == payload.out_path {
             panic!("Output path has same path as input")
         }
@@ -63,32 +124,31 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
         let mut cur_cmd_arguments = cmd_arguments.clone();
 
         if args.tompv {
+        } else if args.tonull {
+            cur_cmd_arguments.append(&mut vec![
+                "-i".to_owned(),
+                payload.in_path.display().to_string(),
+                "-f".to_owned(),
+                "null".to_owned(),
+                "NUL".to_owned(),
+            ]);
+            // cur_cmd_arguments.push(format!(" -i {:?} -f null NUL ", payload.in_path));
+        } else if args.peek.is_some() {
         } else {
-            if args.tonull {
+            if args.stripaudio {
+                cur_cmd_arguments.append(&mut enc_args);
+            } else {
                 cur_cmd_arguments.append(&mut vec![
                     "-i".to_owned(),
-                    payload.in_path.display().to_string(),
-                    "-f".to_owned(),
-                    "null".to_owned(),
-                    "NUL".to_owned(),
+                    format!("{}", payload.in_path.display().to_string()),
+                    "-map".to_owned(),
+                    "0:v".to_owned(),
+                    "-map".to_owned(),
+                    "1:a?".to_owned(),
                 ]);
-                // cur_cmd_arguments.push(format!(" -i {:?} -f null NUL ", payload.in_path));
-            } else if args.peek.is_some() {
-            } else {
-                if args.stripaudio {
-                    cur_cmd_arguments.append(&mut enc_args);
-                } else {
-                    cur_cmd_arguments.append(&mut vec![
-                        "-i".to_owned(),
-                        format!("{}", payload.in_path.display().to_string()),
-                        "-map".to_owned(),
-                        "0:v".to_owned(),
-                        "-map".to_owned(),
-                        "1:a".to_owned(),
-                    ]);
-                }
-                cur_cmd_arguments.push(payload.out_path.display().to_string());
             }
+            cur_cmd_arguments.append(&mut enc_args);
+            cur_cmd_arguments.push(payload.out_path.display().to_string());
         }
 
         let (ffplay_path, ffplay_args) =
@@ -112,14 +172,16 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
             } else {
                 (None, None)
             };
-
+        // dbg!(&cur_cmd_arguments);
         ret.push(SmCommand {
             payload,
             ff_path: executable.clone(),
             ff_args: cur_cmd_arguments,
-            rc_data: recipe.data.clone(),
+            recipe: recipe.clone(),
             ffplay_path,
             ffplay_args,
+            vs_path: vs_path.clone(),
+            vs_args: cur_vs_args.clone(),
         });
     }
 
