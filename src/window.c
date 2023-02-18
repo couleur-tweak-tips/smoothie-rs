@@ -1,3 +1,4 @@
+// by https://github.com/Aetopia
 #include <windows.h>
 
 BOOL SetConsoleWindowTitle(char *wndTitle) { return SetConsoleTitle(wndTitle); }
