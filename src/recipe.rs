@@ -82,16 +82,19 @@ impl Recipe {
 
 pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
     assert!(ini.exists(), "Recipe at path `{ini:?}` does not exist");
-    println!("Parsing: {}", ini.display());
+    println!(
+        "Parsing: {}",
+        ini.display().to_string().replace("\\\\?\\", "")
+    );
 
     let mut file = match File::open(&ini) {
         Ok(file) => file,
-        Err(e) => panic!("Error opening file: {e}"),
+        Err(e) => panic!("Error opening file: {}", e),
     };
 
     let metadata = match file.metadata() {
         Ok(metadata) => metadata,
-        Err(e) => panic!("Error getting file metadata: {e}"),
+        Err(e) => panic!("Error getting file metadata: {}", e),
     };
     if metadata.len() == 0 {
         panic!("Error: File is empty: {file:?}");
@@ -100,7 +103,7 @@ pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
     let mut content = String::new();
     match file.read_to_string(&mut content) {
         Ok(_) => (),
-        Err(e) => panic!("Error reading file: {e}"),
+        Err(e) => panic!("Error reading file: {}", e),
     };
 
     let mut cur_category = String::new();
@@ -158,7 +161,7 @@ pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
 pub fn get_recipe(args: &Arguments) -> Recipe {
     let exe = match env::current_exe() {
         Ok(exe) => exe,
-        Err(e) => panic!("Could not resolve Smoothie's binary path: {e}"),
+        Err(e) => panic!("Could not resolve Smoothie's binary path: {}", e),
     };
 
     let bin_dir = match exe.parent() {
@@ -166,7 +169,18 @@ pub fn get_recipe(args: &Arguments) -> Recipe {
         None => panic!("Could not resolve Smoothie's binary directory `{exe:?}`"),
     };
 
-    let rc_path = bin_dir.join(&args.recipe);
+    let rc_path = if PathBuf::from(&args.recipe).exists() {
+        PathBuf::from(&args.recipe)
+    } else {
+        let cur_dir_rc = bin_dir.join(&args.recipe);
+        if !cur_dir_rc.exists() {
+            panic!(
+                "Recipe filepath does not exist (expected at {})",
+                cur_dir_rc.display()
+            )
+        }
+        cur_dir_rc
+    };
 
     let mut rc: Recipe = Recipe::new();
 
@@ -174,7 +188,7 @@ pub fn get_recipe(args: &Arguments) -> Recipe {
     parse_recipe(rc_path, &mut rc);
 
     if args.r#override.is_some() {
-        dbg!(&args.r#override);
+        // dbg!(&args.r#override);
         for ov in args
             .r#override
             .clone()
