@@ -28,13 +28,13 @@ pub struct Arguments {
     #[clap(long, conflicts_with = "encargs")]
     pub peek: Option<i32>,
 
-    // /// Pass a .vpy script to evaluate nodes from
-    // #[clap(long)]
-    // pub vpy: Option<PathBuf>,
+    /// Pass a .vpy script to evaluate nodes from
+    #[clap(long, default_value = "jamba.vpy")]
+    pub vpy: PathBuf,
 
     // misc io
     /// Discard any audio tracks that'd pass to output
-    #[clap(visible_alias = "an", long, default_value_t = false)]
+    #[clap(long, visible_alias = "an", default_value_t = false)]
     pub stripaudio: bool,
 
     /// Redirect VS' Y4M output to null
@@ -87,11 +87,7 @@ pub struct Arguments {
     // debugging
     /// Display details about recipe, what I personally use
     #[clap(short, long, default_value_t = false)]
-    pub verb: bool,
-
-    /// Makes sm behave like an app instead of a CLI
-    #[clap(visible_alias = "apm", long, default_value_t = false)]
-    pub appmode: bool,
+    pub verbose: bool,
 
     /// Prints all the nerdy stuff to find bugs
     #[clap(visible_alias = "db", long, default_value_t = false)]
@@ -220,34 +216,22 @@ If you'd like getting help take a screenshot of this message and your recipe and
                 Err(e) => panic!("Error reading last_args.txt: {}", e),
             };
             let last_args_lines: Vec<&str> = content.lines().collect();
+            dbg!(&last_args_lines);
             match Arguments::try_parse_from(last_args_lines) {
                 Ok(args) => args,
                 Err(e) => panic!("{}", e),
             }
         }
         _ => {
-            // let mut file = match File::open(&mut last_args) {
-            //     Ok(file) => file,
-            //     Err(e) => panic!("Error opening last_args.txt: {e}"),
-            // };
             let mut file = match File::create(&mut last_args) {
                 Ok(file) => file,
                 Err(e) => panic!("Error opening last_args.txt: {}", e),
             };
 
-            // let len = env::args().len();
-            // let mut arr = [u8;(len)];
-
-            // let mut passed = vec![];
-            dbg!(&file);
             for arg in env::args() {
                 write!(file, "{arg}\n").expect("Failed writing to last_args.txt");
-                // file.write_all(arg.as_ref()).expect("Failed writing to last_args.txt");
-                // passed.push(arg.as_bytes());
-                // println!("{:?}", arg);
             }
 
-            // File::write(&mut file, passed.as_slice()).expect("Failed writing args to last_args.txt");
             Arguments::parse()
         }
     }
