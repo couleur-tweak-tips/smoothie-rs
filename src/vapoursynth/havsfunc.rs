@@ -6,7 +6,7 @@ use rustsynth::{
     prelude::{Map, API},
 };
 
-pub fn change_fps<'elem, 'core: 'elem>(
+pub fn _change_fps<'elem, 'core: 'elem>(
     api: API,
     core: CoreRef<'core>,
     clip: Node<'core>,

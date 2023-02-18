@@ -165,7 +165,7 @@ fn update_timecodes<T: Write>(frame: &Frame, state: &mut OutputState<T>) -> Resu
     Ok(())
 }
 
-fn frame_done_callback<'core, T: Write + std::marker::Send + 'core>(
+fn frame_done_callback<'core, T: Write + Send + 'core>(
     frame: Result<FrameRef<'core>, GetFrameError>,
     n: usize,
     _node: &Node<'core>,
