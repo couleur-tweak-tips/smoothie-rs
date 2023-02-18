@@ -13,7 +13,7 @@ pub struct Payload {
     pub timecodes: Option<Vec<Timecodes>>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Timecodes {
     pub start: String,
     pub fin: String,
@@ -28,7 +28,7 @@ fn ensure_dir(dir: &PathBuf, silent: bool) {
                     println!("Creating folder `{dir:?}`")
                 }
             }
-            Err(e) => panic!("Failed creating folder at `{dir:?}`, Error: {e}"),
+            Err(e) => panic!("Failed creating folder at `{dir:?}`, Error: {}", e),
         }
     }
 }
@@ -213,7 +213,7 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
         let cuts: HashMap<PathBuf, Vec<Timecodes>> =
             match serde_json::from_str(&args.json.clone().unwrap()) {
                 Ok(cut) => cut,
-                Err(e) => panic!("Failed parsing JSON: {e}"),
+                Err(e) => panic!("Failed parsing JSON: {}", e),
             };
 
         for vid in Vec::from_iter(cuts.keys()) {
@@ -253,7 +253,7 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
     }
 
     if payloads.is_empty() {
-        panic!("No videos were passed to Smoothie")
+        panic!("No valid videos were passed to Smoothie")
     }
 
     payloads
