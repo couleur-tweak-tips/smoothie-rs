@@ -204,8 +204,8 @@ if (fbd := rc['frame blending'])['enabled'].lower() in YES:
     if fbd['weighting'].lower() in NO:
         verb("No weighting mode passed: defaulting to equal")
         fbd['weighting'] = 'equal'
+    if float(fbd['fps']) >= ((clip.fps_den / clip.fps_num) + 1):
 
-    if float(fbd['fps']) >= (clip.fps_den / clip.fps_num) + 1:
         verb('Input video FPS is lower or equal compared to frame blending FPS, skipping frame blending')
     else:
         clip = blending.FrameBlend(clip, fbd, rc['miscellaneous']['always verbose'].lower() in YES)
