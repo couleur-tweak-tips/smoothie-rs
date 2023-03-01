@@ -64,6 +64,12 @@ $env:VAPOURSYNTH_LIB_DIR=(Get-Item ./vapoursynth/sdk/lib64/).FullName
 cargo build --release
 cp ./target/release/smoothie-rs.exe ./smoothie-rs-artifact/bin/
 cp ./target/*.ini ./smoothie-rs-artifact/
+
+if (-not(Test-Path "./smoothie-rs-artifact/scripts/")){
+    mkdir ./smoothie-rs-artifact/scripts/ | out-null
+}
+mkdir ./smoothie-rs-artifact/scripts/ | out-null
+cp ./target/scripts/* ./smoothie-rs-artifact/scripts/
 rm (Convert-Path ./vapoursynth/vapoursynth64/*/*.keep)
 rm ./vapoursynth/vapoursynth64/plugins/
 mv ./vapoursynth/vapoursynth64/* ./smoothie-rs-artifact/bin/vapoursynth64/ -Force
