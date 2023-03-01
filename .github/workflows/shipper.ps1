@@ -68,7 +68,7 @@ cp ./target/*.ini ./smoothie-rs-artifact/
 if (-not(Test-Path "./smoothie-rs-artifact/scripts/")){
     mkdir ./smoothie-rs-artifact/scripts/ | out-null
 }
-mkdir ./smoothie-rs-artifact/scripts/ | out-null
+
 cp ./target/scripts/* ./smoothie-rs-artifact/scripts/
 rm (Convert-Path ./vapoursynth/vapoursynth64/*/*.keep)
 rm ./vapoursynth/vapoursynth64/plugins/
