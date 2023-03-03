@@ -46,6 +46,8 @@ def verb(msg):
     if rc['miscellaneous']['always verbose'].lower() in YES:
         print(logging.debug(f'VERB: {msg}'))
 
+verb(rc)
+
 
 _, input_ext = path.splitext(input_video)
 
@@ -135,6 +137,8 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
     except:
         colRange = 'limited'
 
+    og_format = clip.format
+
     if clip.format.color_family == vs.YUV:
         clip = core.resize.Bicubic(clip=clip, format=vs.RGBS, matrix_in_s=cMatrix, range_s=colRange)
 
@@ -144,20 +148,26 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
             format=vs.RGBS
         )
 
-    if path.exists(pi['model']):
-        if path.isfile(pi['model']):
-            raise NotADirectoryError("You need to specify the model's directory, not file")
-        model_path = pi['model']
-    else:
-        model_path = f"{rc['runtime']['smDir']}/models/{pi['model']}"
+    if pi['model'].lower() not in NO:
+        if path.exists(pi['model']):
+            if path.isfile(pi['model']):
+                raise NotADirectoryError("You need to specify the model's directory, not file")
+            model_path = pi['model']
+        else:
+            default_model_dir = path.join(path.dirname(path.dirname(__file__)),"models")
+            if not path.isdir(default_model_dir):
+                print(logging.debug(f"\n\ndefault_model_dir does not exist, expected: {default_model_dir}"))
+                raise NotADirectoryError()
+            model_path = path.join(model_path, pi['model'])
 
-    if not path.exists(model_path):
-        raise FileNotFoundError(f"Model directory not found: [{model_path}]")
+    if not path.isdir(model_path):
+        print(logging.debug(f"\n\nModel directory not found, expected: {default_model_dir}"))
 
     # * Plugin from https://github.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan#usage
     clip = core.rife.RIFE(
         clip=clip,
         factor_num=str(pi['factor']).strip('x'),
+        #multiplier=str(pi['factor']).strip('x'),
         model_path=model_path,
         gpu_id=0,
         gpu_thread=1,
@@ -166,7 +176,9 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
         sc=False  # scene change
     )
 
-    clip = vs.core.resize.Bicubic(clip, format=vs.YUV420P8, matrix_s=cMatrix)
+    clip = vs.core.resize.Bicubic(clip, format=og_format, matrix_s=cMatrix)
+    verb("pre-interp\n")
+    verb(clip)
 # pre-interp
 
 
@@ -198,13 +210,13 @@ if (out := float(rc['timescale']['out'])) != 1:  # Output timescale, done after 
     clip = core.std.AssumeFPS(clip, fpsnum=int(clip.fps * out))
 # output timescale
 
-
 if (fbd := rc['frame blending'])['enabled'].lower() in YES:
 
     if fbd['weighting'].lower() in NO:
         verb("No weighting mode passed: defaulting to equal")
         fbd['weighting'] = 'equal'
-    if float(fbd['fps']) >= ((clip.fps_den / clip.fps_num) + 1):
+
+    if float(fbd['fps']) >= ((clip.fps_num / clip.fps_den) + 1):
 
         verb('Input video FPS is lower or equal compared to frame blending FPS, skipping frame blending')
     else:
@@ -258,7 +270,8 @@ if (flb := rc['flowblur'])['enabled'].lower() in YES and rc['flowblur']['enabled
             original_clip=original,
             mask_path=mask
         )
+        verb("flowblur\n")
+        verb(clip)
 # flowblur
-
 
 clip.set_output()
