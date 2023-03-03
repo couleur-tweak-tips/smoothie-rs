@@ -13,7 +13,7 @@ pub struct Arguments {
     pub input: Vec<PathBuf>,
 
     /// Single output video file path
-    #[clap(short, long, visible_alias = "out")]
+    #[clap(short, long, visible_alias = "out", conflicts_with="tompv", conflicts_with="tonull")]
     pub output: Option<String>,
 
     /// Makes sm behave like an app instead of a CLI tool (e.g pause before exiting on an error)
@@ -42,7 +42,8 @@ pub struct Arguments {
         visible_alias = "tn",
         long,
         default_value_t = false,
-        conflicts_with = "tompv"
+        conflicts_with = "tompv",
+        conflicts_with = "output"
     )]
     pub tonull: bool,
 
@@ -51,7 +52,8 @@ pub struct Arguments {
         visible_alias = "tm",
         long,
         default_value_t = false,
-        conflicts_with = "tonull"
+        conflicts_with = "tonull",
+        conflicts_with = "output"
     )]
     pub tompv: bool,
 
