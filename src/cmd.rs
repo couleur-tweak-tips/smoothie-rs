@@ -78,8 +78,8 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
 
     let vpy_path = if args.vpy.exists() {
         args.vpy
-    } else if cur_exe_dir.parent().unwrap().join(&args.vpy).exists() {
-        cur_exe_dir.parent().unwrap().join(args.vpy)
+    } else if cur_exe_dir.join(&args.vpy).exists() {
+        cur_exe_dir.join(args.vpy)
     } else {
         panic!(
             "jamba.vpy not found, expected {:?}",
