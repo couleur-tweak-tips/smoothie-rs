@@ -7,7 +7,7 @@ curl -L https://github.com/couleurm/VSBundler/releases/latest/download/VapourSyn
 mv smoothie-rs/bin/VapourSynth/* smoothie-rs/bin/
 rm smoothie-rs/bin/VapourSynth/
 
-$env:VAPOURSYNTH_LIB_DIR=(Get-Item ./smoothie-rs/bin/VapourSynth/sdk/lib64/).FullName
+$env:VAPOURSYNTH_LIB_DIR=(Get-Item ./smoothie-rs/bin/sdk/lib64/).FullName
 cargo build --release
 
 cp ./target/release/smoothie-rs.exe ./smoothie-rs/bin/
