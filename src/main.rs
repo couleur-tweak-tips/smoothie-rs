@@ -42,9 +42,10 @@ fn main() {
         || env::var("NO_SMOOTHIE_WIN32").is_ok();
     // user is neither running Windows Terminal and alacritty, OR has NO_SMOOTHIE_WIN32 defined
 
-    if is_conhost
+    if args.tui && is_conhost
         && cfg!(target_os = "windows")
         && !recipe.get_bool("miscellaneous", "always verbose")
+        && !args.verbose
     {
         utils::set_window_position(&recipe);
     }
