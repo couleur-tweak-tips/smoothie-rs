@@ -49,4 +49,4 @@ jobs:
     - uses: actions/upload-artifact@v3
       with:
         name: smoothie-rs-bin-windows
-        path: ./smoothie-rs-artifact/
+        path: ./smoothie-rs/
