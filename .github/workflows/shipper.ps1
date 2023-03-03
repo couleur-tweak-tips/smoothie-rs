@@ -11,7 +11,7 @@ $env:VAPOURSYNTH_LIB_DIR=(Get-Item ./smoothie-rs/bin/sdk/lib64/).FullName
 cargo build --release
 
 cp ./target/release/smoothie-rs.exe ./smoothie-rs/bin/
-cp ./target/scripts/*.py ./smoothie-rs/bin/VapourSynth
+cp ./target/scripts/* ./smoothie-rs/bin/
 cp ./target/*.ini ./smoothie-rs/
 
 set-content ./smoothie-rs/launch.cmd -value '@echo off & cd /D "%~dp0" & .\bin\smoothie-rs.exe --tui & pause'
