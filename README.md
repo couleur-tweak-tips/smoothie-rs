@@ -18,17 +18,17 @@ Thanks to yalter and anima for inspiration (though I'll try to copy as less code
 - [ ] Refactor VEGAS Pre-Renderer script & [suckless-cut](https://github.com/couleur-tweak-tips/suckless-cut) to support sm-rs' ``--json``
 
 
-Using rustsynth would slim down Smoothie's bundle just to:
+Using rustsynth would slim down Smoothie's bundle to just:
 
 - 🗜 `smoothie-0.69.zip`
     - 📂``Smoothie/``
         - 📂``models/`` - rife models
         - 📂``masks/`` - artifact masking for flowblur (and maybe interp soon)
         - 📝 ``recipe.ini``
-        - 📂``bin/`` - let me know a more fit name since there's also text files in here
-            - 📚 ``defaults.ini`` - read-only version of the recipe, used for fallback
-            - 🧋 ``Smoothie.exe`` - this passes all arguments to sm and add `-cui`
-            - 💾 ``sm.exe`` - consider that the "core", will be the biggest file out of the two
+        - 📂``bin/`` - let me know a more fit name since there are also text files in here
+            - 📚 ``defaults.ini`` - read-only version of the recipe, used as a fallback
+            - 🧋 ``Smoothie.exe`` - passes all arguments to sm and add `-cui`
+            - 💾 ``sm.exe`` - consider this to be the "core", would be the biggest file out of the two
             - 🗒 ``last_args.txt`` - not really a binary but I prefer it tucked in bin
             - ⚙ `VapourSynth.dll` - no idea if anything else is needed, haven't looked into last goal yet
             - ⚙ `msvcp140.dll`, `vcruntime140.dll`, `vcruntime140_1.dll` - dependencies for Rust & VapourSynth
@@ -37,9 +37,9 @@ Using rustsynth would slim down Smoothie's bundle just to:
                 - ⚙ ``libvslsmashsource.dll`` - to input videos
                 - ⚙ ``RemapFramesVapoursynth.dll`` - for `-padding`
                 - ⚙ ``RIFE.dll`` - for low fps interpolation, uses /models/
-                - ⚙ ``libmvtools.dll`` - used for flowblur
+                - ⚙ ``libmvtools.dll`` - for flowblur
                 - ⚙ ``svpflow1_vs.dll`` & ``svpflow2_vs.dll`` - frame interpolation
-                - ⚙ ``akarin.dll`` - used for lexpr
+                - ⚙ ``akarin.dll`` - for lexpr
 
 Else in that ``/bin/`` folder there would be a whole portable Python environment
 

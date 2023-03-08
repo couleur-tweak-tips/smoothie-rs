@@ -10,7 +10,7 @@ pub fn vspipe_render(commands: Vec<SmCommand>) {
             .args(cmd.vs_args)
             .stdout(Stdio::piped())
             .spawn()
-            .expect("Failed spawning ffmpeg child");
+            .expect("Failed in spawning FFmpeg child");
 
         let pipe = vs.stdout.take().expect("Failed piping out of VSPipe");
 
@@ -18,7 +18,7 @@ pub fn vspipe_render(commands: Vec<SmCommand>) {
             .args(cmd.ff_args)
             .stdin(pipe)
             .spawn()
-            .expect("Failed spawning ffmpeg child");
+            .expect("Failed in spawning FFmpeg child");
 
         vs.wait_with_output().unwrap();
         ffmpeg.wait_with_output().unwrap();

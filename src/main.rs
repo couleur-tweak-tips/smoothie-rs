@@ -16,10 +16,9 @@ mod cmd;
 mod parse;
 mod recipe;
 mod render;
+mod utils;
 mod vapoursynth;
 mod video;
-mod utils;
-
 
 use crate::{cli::Arguments, cmd::SmCommand, recipe::Recipe, video::Payload};
 use std::env;
@@ -37,12 +36,12 @@ fn main() {
     let recipe: Recipe = recipe::get_recipe(&args);
     // loads defaults.ini, then overrides recipe.ini over it
 
-    let is_conhost: bool = (env::var("WT_SESSION").is_err()
-        && env::var("ALACRITY_LOG").is_err())
+    let is_conhost: bool = (env::var("WT_SESSION").is_err() && env::var("ALACRITY_LOG").is_err())
         || env::var("NO_SMOOTHIE_WIN32").is_ok();
     // user is neither running Windows Terminal and alacritty, OR has NO_SMOOTHIE_WIN32 defined
 
-    if args.tui && is_conhost
+    if args.tui
+        && is_conhost
         && cfg!(target_os = "windows")
         && !recipe.get_bool("miscellaneous", "always verbose")
         && !args.verbose
