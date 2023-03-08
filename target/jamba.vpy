@@ -35,8 +35,8 @@ except json.decoder.JSONDecodeError:
     print(f"\n\nRecipe: {recipe}\n")
     raise Exception("Failed to parse the passed recipe as a JSON string")
 
-YES: list = ['on', 'True', 'true', 'yes', 'y', '1', True]
-NO: list = ['off', 'False', 'false', 'no', 'n', '0', 'null', '', ' ', '  ', '\t', 'none', None, False]
+YES: list = ['on', 'True', 'true', 'yes', 'y', '1', 'yeah', 'yea', 'yep', 'sure', 'positive', True]
+NO: list = ['off', 'False', 'false', 'no', 'n', 'nah', 'nope', 'negative', 'negatory', '0', 'null', '', ' ', '  ', '\t', 'none', None, False]
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
