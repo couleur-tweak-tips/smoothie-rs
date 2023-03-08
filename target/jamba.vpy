@@ -261,7 +261,7 @@ if (flb := rc['flowblur'])['enabled'].lower() in YES and rc['flowblur']['enabled
 
         if not path.exists(mask):
             raise ValueError(
-                "The mask you specify must be absolute"
+                "The path of the mask you specify must be absolute"
                 " (get it by doing shift-right click the image -> Copy As Path)"
             )
 
