@@ -1,8 +1,9 @@
 import vapoursynth as vs
 from vapoursynth import core
 
-import weighting
-import havsfunc
+# you'll probably need to remove "from scripts" if you use that somewhere else
+from scripts import weighting
+from scripts import havsfunc
 
 import logging
 import ast
