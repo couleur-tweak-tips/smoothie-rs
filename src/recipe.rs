@@ -39,7 +39,7 @@ impl Recipe {
             Some(section) => {
                 section.insert(key, value);
             }
-            None => panic!("Recipe: section not found: {section}"),
+            None => panic!("Recipe section not found: {section}"),
         }
     }
 
@@ -114,7 +114,7 @@ pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
         round += 1;
 
         match cur {
-            // a empty line or comment, just like this one
+            // an empty line or comment, just like this one
             _comment
                 if cur.starts_with('#')
                     || cur.starts_with('/')
@@ -195,7 +195,7 @@ pub fn get_recipe(args: &Arguments) -> Recipe {
             .expect("Failed unwrapping --override")
         {
             // let (category, key, value) = ov.splitn(3, ";").collect();
-            // bad code i know, let me know if you can make line above work ^
+            // bad code I know, let me know if you can make the line above work ^
             let mut iter = ov.splitn(3, ';');
             let category = iter
                 .next()

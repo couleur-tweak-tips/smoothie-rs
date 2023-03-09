@@ -21,14 +21,14 @@ pub struct SmCommand {
 pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -> Vec<SmCommand> {
     let executable: String = if args.tompv {
         which("mpv")
-            .expect("MPV is not installed and/or it's directory is not in PATH")
+            .expect("mpv has not been installed or has not been added to PATH")
             .display()
             .to_string()
     } else {
         let ff_path = recipe.get("output", "process");
         if ff_path == "ffmpeg" {
             which(ff_path)
-                .expect("FFmpeg is not installed and/or it's directory is not in PATH")
+                .expect("FFmpeg has not been installed or has not been added to PATH")
                 .display()
                 .to_string()
         } else {
@@ -65,7 +65,7 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
     let bin_dir_vspipe = cur_exe_dir.join(vs_bin);
     let vspipe_in_path = which("vspipe");
     let vs_path = (if bin_dir_vspipe.exists() {
-        println!("using vspipe that's in same directory as binary");
+        println!("Using vspipe that's in same directory as binary");
         bin_dir_vspipe
     } else if vspipe_in_path.is_ok() {
         println!("Using VSPipe from PATH");
@@ -157,7 +157,7 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
                 if ffplay_path == "ffplay" {
                     ffplay_path = which(ffplay_path)
                     .expect(
-                        "FFplay (previewer) is not installed and/or it's directory is not in PATH",
+                        "FFplay (previewer) has not been installed or has not been added to PATH",
                     )
                     .display()
                     .to_string()

@@ -191,7 +191,7 @@ def InterFrame(Input, Preset='Medium', Tuning='Film', NewNum=None, NewDen=1, GPU
                FrameDouble=False):
 
     if not isinstance(Input, vs.VideoNode):
-        raise TypeError('InterFrame: This is not a clip')
+        raise TypeError('InterFrame: This is not a video')
 
     sw=Input.format.subsampling_w
     sh=Input.format.subsampling_h

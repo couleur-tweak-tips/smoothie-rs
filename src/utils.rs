@@ -1,5 +1,5 @@
-use std::ffi::c_int;
 use crate::recipe::Recipe;
+use std::ffi::c_int;
 
 #[allow(non_snake_case)]
 extern "C" {
@@ -12,7 +12,7 @@ extern "C" {
     ) -> c_int;
 }
 
-pub fn set_window_position (recipe: &Recipe) {
+pub fn set_window_position(recipe: &Recipe) {
     #[rustfmt::skip]
         let pos = {
         let pos = recipe.get("console", "position");

@@ -3,7 +3,7 @@ from vapoursynth import core
 
 def FillDrops(clip, thresh=0.1):
     if not isinstance(clip, vs.VideoNode):
-        raise ValueError('This is not a clip')
+        raise ValueError('This is not a video')
 
     differences = core.std.PlaneStats(clip, clip[0] + clip)
 

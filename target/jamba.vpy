@@ -35,8 +35,8 @@ except json.decoder.JSONDecodeError:
     print(f"\n\nRecipe: {recipe}\n")
     raise Exception("Failed to parse the passed recipe as a JSON string")
 
-YES: list = ['on', 'True', 'true', 'yes', 'y', '1', True]
-NO: list = ['off', 'False', 'false', 'no', 'n', '0', 'null', '', ' ', '  ', '\t', 'none', None, False]
+YES: list = ['on', 'True', 'true', 'yes', 'y', '1', 'yeah', 'yea', 'yep', 'sure', 'positive', True]
+NO: list = ['off', 'False', 'false', 'no', 'n', 'nah', 'nope', 'negative', 'negatory', '0', 'null', '', ' ', '  ', '\t', 'none', None, False]
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -261,7 +261,7 @@ if (flb := rc['flowblur'])['enabled'].lower() in YES and rc['flowblur']['enabled
 
         if not path.exists(mask):
             raise ValueError(
-                "The mask you specify must be absolute"
+                "The path of the mask you specify must be absolute"
                 " (get it by doing shift-right click the image -> Copy As Path)"
             )
 

@@ -13,7 +13,13 @@ pub struct Arguments {
     pub input: Vec<PathBuf>,
 
     /// Single output video file path
-    #[clap(short, long, visible_alias = "out", conflicts_with="tompv", conflicts_with="tonull")]
+    #[clap(
+        short,
+        long,
+        visible_alias = "out",
+        conflicts_with = "tompv",
+        conflicts_with = "tonull"
+    )]
     pub output: Option<String>,
 
     /// Makes sm behave like an app instead of a CLI tool (e.g pause before exiting on an error)
@@ -47,7 +53,7 @@ pub struct Arguments {
     )]
     pub tonull: bool,
 
-    /// Redirect VS' Y4M output to MPV (video player)
+    /// Redirect VS' Y4M output to mpv (video player)
     #[clap(
         visible_alias = "tm",
         long,
@@ -147,9 +153,9 @@ Location in source:
 Arguments passed:
 {args:?}
 
-Note: If your PC is still going BRRR the rendering might still be ongoing :)
+Note: If your PC is still going BRRR the video might still be rendering :)
 
-If you'd like getting help take a screenshot of this message and your recipe and come over to discord.gg/CTT and make a post in #support
+If you'd like help, take a screenshot of this message and your recipe and come over to discord.gg/CTT and make a post in #support
                     "#))
                 .set_level(rfd::MessageLevel::Error)
                 .show();
@@ -173,7 +179,7 @@ If you'd like getting help take a screenshot of this message and your recipe and
     let mut last_args = current_exe_path_dir.join("last_args.txt");
     if !last_args.exists() {
         if File::create(&last_args).is_err() {
-            panic!("Failed creating last_args.txt at {current_exe_path_dir:?}")
+            panic!("Failed to create last_args.txt at {current_exe_path_dir:?}")
         };
     }
 

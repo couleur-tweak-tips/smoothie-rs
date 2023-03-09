@@ -25,7 +25,7 @@ def average(clip: vs.VideoNode, weights: list[float], divisor: float | None = No
     if divisor is None:
         divisor = sum(weights)
 
-    assert diameter % 2 == 1, "You need an odd number of weights"
+    assert diameter % 2 == 1, "An odd number of weights is required."
 
     clips = [get_offset_clip(offset) for offset in range(-radius, radius + 1)]
 

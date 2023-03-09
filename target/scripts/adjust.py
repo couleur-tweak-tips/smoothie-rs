@@ -7,10 +7,10 @@ import math
 
 def Tweak(clip, hue=None, sat=None, bright=None, cont=None, coring=True):
     if clip.format is None:
-        raise vs.Error("Tweak: only clips with constant format are accepted.")
+        raise vs.Error("Tweak: only videos with a constant format are supported")
 
     if clip.format.color_family == vs.RGB:
-        raise vs.Error("Tweak: RGB clips are not accepted.")
+        raise vs.Error("Tweak: videos using the RGB color model are not supported")
 
     c = vs.get_core()
         

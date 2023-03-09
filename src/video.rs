@@ -47,13 +47,13 @@ fn probe_video(input: &PathBuf) -> Option<FfProbe> {
     let file = match fs::File::open(&path) {
         Ok(file) => file,
         _ => {
-            println!("Error opening file: {path:?}");
+            println!("Error opening input file: {path:?}");
             return None;
         }
     };
 
     // Check if the file is empty (0 bytes)
-    let metadata = file.metadata().expect("Error getting file metadata");
+    let metadata = file.metadata().expect("Error getting input file metadata");
     if metadata.len() == 0 {
         println!(
             "{:?} is an empty file (0 bytes), discarding..",
@@ -89,14 +89,14 @@ pub fn resolve_outpath(
 
     #[rustfmt::skip]
     let fruits: Vec<&str> = [
-        "Berry",      "Cherry",   "Cranberry",   "Coconut",   "Kiwi",
-        "Avocado",    "Durian",   "Lemon",       "Fig",       "Lime",
-        "Mirabelle",  "Banana",   "Pineapple",   "Pitaya",    "Blueberry",
-        "Raspberry",  "Apricot",  "Strawberry",  "Melon",     "Papaya",
-        "Apple",      "Pear",     "Orange",      "Mango",     "Plum",
-        "Peach",      "Grape",    "Tomato",      "Cucumber",  "Eggplant",
-        "Guava",      "Honeydew", "Lychee",      "Nut",       "Quince",
-        "Olive",      "Passion",  "Plum",        "Pomelo",    "Raisin",
+        "Apple",      "Apricot",     "Avocado",     "Banana",     "Blackberry",
+        "Blueberry",  "Cantaloupe",  "Cherry",      "Coconut",    "Cranberry",
+        "Cucumber",   "Durian",      "Date",        "Eggplant",   "Fig",
+        "Grape",      "Guava",       "Honeydew",    "Kiwi",       "Lemon",
+        "Lime",       "Lychee",      "Mango",       "Mirabelle",  "Olive",
+        "Orange",     "Papaya",      "Passion",     "Peach",      "Pear",
+        "Pineapple",  "Pitaya",      "Plum",        "Pomelo",     "Quince",
+        "Raspberry",  "Starfruit",   "Strawberry",  "Tomato",     "Watermelon",
     ].to_vec();
 
     let mut format = if dont_format {
@@ -177,7 +177,7 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
             .add_filter(
                 "Video file",
                 &[
-                    "mp4", "mkv", "webm", "mov", "avi", "wmv", "flv", "ts", "m3u8",
+                    "mp4", "mkv", "webm", "mov", "avi", "wmv", "flv", "ts", "m3u8", "qt", "m4v",
                 ],
             )
             .set_title("Select video(s) to queue to Smoothie")
