@@ -1,21 +1,22 @@
 # vi: ft=python
 
 import vapoursynth as vs
-
-core = vs.core
+from vapoursynth import core
 
 from os import path  # filepath handling
-from sys import path as envpath  # Python's own PATH
+import sys
 
-if f"{path.dirname(__file__)}/scripts" not in envpath:  # Sometimes isn't by default
-    envpath.append(f"{path.dirname(__file__)}/scripts")  # From script directory
+path_dirname = path.dirname(__file__).replace('\\\\?\\', '')  # .replace because windows
+
+if path_dirname not in sys.path:  # Sometimes isn't by default
+    sys.path.append(path_dirname)
 
 # in order of (optional) use
-import havsfunc
-import blending
-import weighting
-import adjust
-import filldrops
+from scripts import havsfunc
+from scripts import blending
+from scripts import weighting
+from scripts import adjust
+from scripts import filldrops
 
 # import scripts  # Import every .py script modules from /plugins/
 
@@ -38,16 +39,13 @@ except json.decoder.JSONDecodeError:
 YES: list = ['on', 'True', 'true', 'yes', 'y', '1', 'yeah', 'yea', 'yep', 'sure', 'positive', True]
 NO: list = ['off', 'False', 'false', 'no', 'n', 'nah', 'nope', 'negative', 'negatory', '0', 'null', '', ' ', '  ', '\t', 'none', None, False]
 
-import logging
-logging.basicConfig(level=logging.DEBUG)
 
-
-def verb(msg):
+def verb(*msg, **kwargs):
     if rc['miscellaneous']['always verbose'].lower() in YES:
-        print(logging.debug(f'VERB: {msg}'))
+        print("VERB:", *msg, file=sys.stderr, **kwargs)
+
 
 verb(rc)
-
 
 _, input_ext = path.splitext(input_video)
 
@@ -154,7 +152,7 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
                 raise NotADirectoryError("You need to specify the model's directory, not file")
             model_path = pi['model']
         else:
-            default_model_dir = path.join(path.dirname(path.dirname(__file__)),"models")
+            default_model_dir = path.join(path.dirname(path.dirname(__file__)), "models")
             if not path.isdir(default_model_dir):
                 print(logging.debug(f"\n\ndefault_model_dir does not exist, expected: {default_model_dir}"))
                 raise NotADirectoryError()
@@ -167,7 +165,7 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
     clip = core.rife.RIFE(
         clip=clip,
         factor_num=str(pi['factor']).strip('x'),
-        #multiplier=str(pi['factor']).strip('x'),
+        # multiplier=str(pi['factor']).strip('x'),
         model_path=model_path,
         gpu_id=0,
         gpu_thread=1,
@@ -221,6 +219,8 @@ if (fbd := rc['frame blending'])['enabled'].lower() in YES:
         verb('Input video FPS is lower or equal compared to frame blending FPS, skipping frame blending')
     else:
         clip = blending.FrameBlend(clip, fbd, rc['miscellaneous']['always verbose'].lower() in YES)
+
+
 # frame blending
 
 
@@ -228,11 +228,12 @@ def Masking(
         to_mask: vs.VideoNode,
         original_clip: vs.VideoNode,
         mask_path: str):
-
     rmask = core.ffms2.Source(mask_path)
     featherMask = rmask.std.Minimum().std.BoxBlur(vradius=6, hradius=6, vpasses=2, hpasses=2)
 
     return core.std.MaskedMerge(clipa=to_mask, clipb=original_clip, mask=featherMask, first_plane=True)
+
+
 # mask func
 
 
