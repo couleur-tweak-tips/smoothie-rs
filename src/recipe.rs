@@ -146,6 +146,11 @@ pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
                     .split_once(':')
                     .expect("Recipe: Failed to split_once a key");
 
+                if key.trim() == "∞" {
+                    println!("You buffoon.");
+                    std::process::exit(0);
+                }
+
                 rc.insert_value(
                     &cur_category,
                     key.trim().to_string(),
