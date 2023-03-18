@@ -37,7 +37,8 @@ except json.decoder.JSONDecodeError:
     raise Exception("Failed to parse the passed recipe as a JSON string")
 
 YES: list = ['on', 'True', 'true', 'yes', 'y', '1', 'yeah', 'yea', 'yep', 'sure', 'positive', True]
-NO: list = ['off', 'False', 'false', 'no', 'n', 'nah', 'nope', 'negative', 'negatory', '0', 'null', '', ' ', '  ', '\t', 'none', None, False]
+NO: list = ['off', 'False', 'false', 'no', 'n', 'nah', 'nope', 'negative', 'negatory', '0', 'null', '', ' ', '  ', '\t',
+            'none', None, False]
 
 
 def verb(*msg, **kwargs):
@@ -45,6 +46,11 @@ def verb(*msg, **kwargs):
         print("VERB:", *msg, file=sys.stderr, **kwargs)
 
 
+def eprint(*msg, **kwargs):
+    print("ERR:", *msg, file=sys.stderr, **kwargs)
+
+
+verb(f"Using vapoursynth bindings from {vs.__file__}")
 verb(rc)
 
 _, input_ext = path.splitext(input_video)
@@ -88,63 +94,7 @@ if (dt := rc['miscellaneous']['dedup threshold']).lower() not in NO:
     )
 # deduplication
 
-
 if (pi := rc['pre-interp'])['enabled'].lower() in YES:
-
-    # Color conversion snippet taken from Flowframes:
-    # Source: https://github.com/n00mkrad/flowframes/blob/main/Code/Os/VapourSynthUtils.cs
-    # Support: https://www.patreon.com/n00mkrad
-
-    # I'm sure some vs wizards can overhaul this to be much shorter, feel free to PR
-
-    cMatrix = '709'
-
-    try:
-        m = clip.get_frame(0).props._Matrix
-
-        if m == 0:
-            cMatrix = 'rgb'
-        elif m == 4:
-            cMatrix = 'fcc'
-        elif m == 5:
-            cMatrix = '470bg'
-        elif m == 6:
-            cMatrix = '170m'
-        elif m == 7:
-            cMatrix = '240m'
-        elif m == 8:
-            cMatrix = 'ycgco'
-        elif m == 9:
-            cMatrix = '2020ncl'
-        elif m == 10:
-            cMatrix = '2020cl'
-        elif m == 12:
-            cMatrix = 'chromancl'
-        elif m == 13:
-            cMatrix = 'chromacl'
-        elif m == 14:
-            cMatrix = 'ictcp'
-
-    except:
-        cMatrix = '709'
-
-    colRange = 'limited'
-
-    try:
-        if clip.get_frame(0).props._ColorRange == 0: colRange = 'full'
-    except:
-        colRange = 'limited'
-
-    og_format = clip.format
-
-    if clip.format.color_family == vs.YUV:
-        clip = core.resize.Bicubic(clip=clip, format=vs.RGBS, matrix_in_s=cMatrix, range_s=colRange)
-
-    if clip.format.color_family == vs.RGB:
-        clip = core.resize.Bicubic(
-            clip=clip,
-            format=vs.RGBS
-        )
 
     if pi['model'].lower() not in NO:
         if path.exists(pi['model']):
@@ -154,12 +104,16 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
         else:
             default_model_dir = path.join(path.dirname(path.dirname(__file__)), "models")
             if not path.isdir(default_model_dir):
-                print(logging.debug(f"\n\ndefault_model_dir does not exist, expected: {default_model_dir}"))
+                eprint(f"\n\ndefault_model_dir does not exist, expected: {default_model_dir}")
                 raise NotADirectoryError()
             model_path = path.join(model_path, pi['model'])
 
     if not path.isdir(model_path):
-        print(logging.debug(f"\n\nModel directory not found, expected: {default_model_dir}"))
+        eprint(f"\n\nModel directory not found, expected: {default_model_dir}")
+
+    og_format = clip.format
+    og_matrix = 1#clip.get_frame(0).props._Matrix
+    clip = clip = core.resize.Bicubic(clip=clip, format=vs.RGBS)
 
     # * Plugin from https://github.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan#usage
     clip = core.rife.RIFE(
@@ -173,10 +127,9 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
         uhd=False,  # tune for 1440p+ content
         sc=False  # scene change
     )
-
-    clip = vs.core.resize.Bicubic(clip, format=og_format, matrix_s=cMatrix)
-    verb("pre-interp\n")
-    verb(clip)
+    #eprint(f"og_matrix:{og_matrix}")
+    clip = clip = core.resize.Bicubic(clip=clip, format=og_format, matrix=og_matrix)
+    #verb(f"pre-interp\n{clip}")
 # pre-interp
 
 
@@ -219,8 +172,6 @@ if (fbd := rc['frame blending'])['enabled'].lower() in YES:
         verb('Input video FPS is lower or equal compared to frame blending FPS, skipping frame blending')
     else:
         clip = blending.FrameBlend(clip, fbd, rc['miscellaneous']['always verbose'].lower() in YES)
-
-
 # frame blending
 
 
@@ -232,8 +183,6 @@ def Masking(
     featherMask = rmask.std.Minimum().std.BoxBlur(vradius=6, hradius=6, vpasses=2, hpasses=2)
 
     return core.std.MaskedMerge(clipa=to_mask, clipb=original_clip, mask=featherMask, first_plane=True)
-
-
 # mask func
 
 
