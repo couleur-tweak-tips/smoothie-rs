@@ -1,11 +1,13 @@
 import vapoursynth as vs
 from vapoursynth import core
+import sys
 
 # you'll probably need to remove "from scripts" if you use that somewhere else
 from scripts import weighting
 from scripts import havsfunc
 
 import logging
+logging.basicConfig(level=logging.DEBUG)
 import ast
 
 
@@ -174,47 +176,35 @@ def _test_weights():
 
 
 def FrameBlend(clip: vs.VideoNode, fbd: dict, is_verbose: bool) -> vs.VideoNode:
+
+    # duplicated code I know... let me know a better way to bring them into scope.
     def verb(msg):
         if is_verbose:
             print(logging.debug(f'VERB: {msg}'))
+
+    YES: list = ['on', 'True', 'true', 'yes', 'y', '1', 'yeah', 'yea', 'yep', 'sure', 'positive', True]
+    NO: list = ['off', 'False', 'false', 'no', 'n', 'nah', 'nope', 'negative', 'negatory', '0', 'null', '', ' ', '  ',
+                '\t', 'none', None, False]
 
     weights = parse_weights2(clip, fbd)
 
     fps = round(clip.fps_num / clip.fps_den)
 
     logging.debug(
-        f'{fps} -> {fbd["fps"]} @ {fbd["intensity"]} ({len(weights)} blur-frames) using "{fbd["weighting"]}" => ' + format_vec(
+        f'{fps} {fbd["fps"]} @ {fbd["intensity"]} ({len(weights)} blur-frames) using "{fbd["weighting"]}" => ' + format_vec(
             weights))
 
+    if fbd["bright blend"] not in NO:
+        og_format = clip.format
+        og_matrix = 1#clip.get_frame(0).props._Matrix
+        clip = core.resize.Bicubic(clip=clip, format=vs.RGB48, transfer_in_s="709", transfer_s="linear", matrix_in_s="709")
+
     clip = average(clip=clip, weights=weights)
+
+    if fbd["bright blend"] in YES:
+
+        clip = core.resize.Bicubic(clip=clip, format=og_format, matrix=og_matrix, transfer_s="709", transfer_in_s="linear", matrix_s="709")
+
     clip = havsfunc.ChangeFPS(clip, int(fbd['fps']))
 
     return clip
-
-# region aa
-# def parse_weights (clip: vs.VideoNode, fbd: dict[str]) -> list[float]:
-#
-#    weight_amount: int = round((clip.fps_den / clip.fps_num) / fbd['fps'])
-#
-#    # weird pythonic syntax to loop over each object from generated list
-#    to_parse = [s.strip() for s in fbd['weighting'].split('|')]
-#    function = to_parse.pop(0)
-#
-#    if hasattr(weighting, function):
-#        
-#        function = getattr(weighting, function)
-#    else:
-#        raise ValueError("Unknown weighting algorithm provided")
-#
-#    kwargs = {}
-#    if to_parse.len() > 0:
-#
-#        for key, value in zip(my_list[::2], my_list[1::2]):
-#
-#            try:
-#                value = float(value)
-#            except ValueError:
-#                pass
-#
-#            kwargs[key] = value
-# endregion
