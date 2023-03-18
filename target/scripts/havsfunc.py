@@ -1,7 +1,6 @@
 import math
 from vapoursynth import core
 import vapoursynth as vs
-#from vsutil import depth as vsdepth
 
 """
 ChangeFPS
@@ -199,8 +198,8 @@ def InterFrame(Input, Preset='Medium', Tuning='Film', NewNum=None, NewDen=1, GPU
     if  not sw ==1 and not sh==1 and depth not in [8,10]:
         raise TypeError('InterFrame: input must be yuv420p8 or yuv420p10')
     oInput=Input
-    Input = core.resize.Bicubic(Input, vs.YUV420P8) # what else would it expect anyways? (im sorry i didnt mean to sound cocky please pr please help please help)
-    # Input = vsdepth(Input,8)
+    # Input = core.resize.Point(Input, vs.YUV420P8) # what else would it expect anyways? (im sorry i didnt mean to sound cocky please pr please help please help)
+    Input = core.fmtc.bitdepth(Input,bits=8)
     # Validate inputs
     Preset = Preset.lower()
     Tuning = Tuning.lower()
