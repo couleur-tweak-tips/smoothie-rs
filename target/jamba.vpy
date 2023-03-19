@@ -96,20 +96,15 @@ if (dt := rc['miscellaneous']['dedup threshold']).lower() not in NO:
 
 if (pi := rc['pre-interp'])['enabled'].lower() in YES:
 
-    if pi['model'].lower() not in NO:
-        if path.exists(pi['model']):
-            if path.isfile(pi['model']):
-                raise NotADirectoryError("You need to specify the model's directory, not file")
-            model_path = pi['model']
-        else:
-            default_model_dir = path.join(path.dirname(path.dirname(__file__)), "models")
-            if not path.isdir(default_model_dir):
-                eprint(f"\n\ndefault_model_dir does not exist, expected: {default_model_dir}")
-                raise NotADirectoryError()
-            model_path = path.join(model_path, pi['model'])
-
-    if not path.isdir(model_path):
-        eprint(f"\n\nModel directory not found, expected: {default_model_dir}")
+    if path.exists(pi['model']):
+        if path.isfile(pi['model']):
+            raise NotADirectoryError("You need to specify the model's directory, not file")
+        model_path = pi['model']
+    else:
+        model_path = f"models/{pi['model']}"
+        
+    if not path.exists(model_path):
+        raise FileNotFoundError(f"Model directory not found: [{model_path}]")
 
     og_format = clip.format
     og_matrix = 1#clip.get_frame(0).props._Matrix

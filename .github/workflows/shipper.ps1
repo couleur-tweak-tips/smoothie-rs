@@ -12,8 +12,10 @@ cargo build --release
 
 cp ./target/release/smoothie-rs.exe ./smoothie-rs/bin/
 mkdir ./smoothie-rs/bin/scripts/
+mkdir ./smoothie-rs/bin/models/
 cp ./target/scripts/* ./smoothie-rs/bin/scripts/
 cp ./target/jamba.vpy ./smoothie-rs/bin/
+cp ./target/models/* ./smoothie-rs/bin/models
 cp ./target/*.ini ./smoothie-rs/
 
 set-content ./smoothie-rs/launch.cmd -value '@echo off & cd /D "%~dp0" & .\bin\smoothie-rs.exe --tui & pause'
