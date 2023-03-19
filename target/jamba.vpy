@@ -139,6 +139,9 @@ if (ip := rc['interpolation'])['enabled'].lower() in YES:
         area = None
     else:
         area = int(ip['area'])
+        
+    if not isinstance(ip['fps'], int):
+        ip['fps'] = int(str(ip['fps']).strip('x')) * clip.fps_num / clip.fps_den
 
     # * Adjusted InterFrame from havsfunc,support 10bit with new svp
     # * Source: https://github.com/xyx98/my-vapoursynth-script/blob/master/xvs.py
