@@ -142,13 +142,12 @@ pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
                     panic!("Recipe: Setting {setting:?} has no parent category, line {round}");
                 }
 
-                let (key, value) = setting
+                let (mut key, value) = setting
                     .split_once(':')
                     .expect("Recipe: Failed to split_once a key");
 
                 if key.trim() == "∞" {
-                    println!("You buffoon.");
-                    std::process::exit(0);
+                    key = "2147483647";
                 }
 
                 rc.insert_value(
