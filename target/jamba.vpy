@@ -88,6 +88,8 @@ if (in_scale := float(rc['timescale']['in'])) != 1.0:
 
 
 if (dt := rc['miscellaneous']['dedup threshold']).lower() not in NO:
+    if (dt := rc['miscellaneous']['dedup threshold']).lower() in YES:
+        dt = 0.001
     clip = filldrops.FillDrops(
         clip,
         thresh=float(dt)
