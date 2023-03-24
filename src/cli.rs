@@ -184,16 +184,30 @@ If you'd like help, take a screenshot of this message and your recipe and come o
     }
 
     match first_arg.as_ref() {
+        "enc" | "encoding" | "presets" | "encpresets" | "macros" => {
+            let presets_path = current_exe_path.join("..").join("encoding_presets.ini");
+
+            if !presets_path.exists() {
+                panic!(
+                    "Could not find encoding presets (expected at {})",
+                    presets_path.display()
+                )
+            }
+
+            let ini_path = presets_path.canonicalize().unwrap().display().to_string();
+
+            open_file::open(ini_path, None);
+            std::process::exit(0);
+        }
         "rc" | "recipe" | "conf" | "config" => {
             let ini_path = current_exe_path.join("..").join("recipe.ini");
 
             if !ini_path.exists() {
-                panic!("Could not find recipe at {ini_path:?}")
+                panic!("Could not find recipe at {}", ini_path.display())
             }
 
             let ini_path = ini_path.canonicalize().unwrap().display().to_string();
 
-            // println!("Opening recipe: {}", ini_path);
             open_file::open(ini_path, None);
             std::process::exit(0);
         }
@@ -213,7 +227,7 @@ If you'd like help, take a screenshot of this message and your recipe and come o
             }
             std::process::exit(0);
         }
-        "-!!" | "!!" | "--rerun" | "--!!" => {
+        "!!" | "-!!" | "--!!" | "-rerun" | "--rerun" => {
             let mut file = match File::open(&last_args) {
                 Ok(file) => file,
                 Err(e) => panic!("Error opening last_args.txt: {}", e),
