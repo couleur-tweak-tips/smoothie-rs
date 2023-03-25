@@ -224,8 +224,21 @@ if (flb := rc['flowblur'])['enabled'].lower() in YES and rc['flowblur']['enabled
         verb(clip)
 # flowblur
 
-if float((cg := rc['color grading'])['brightness']) != float(1) or float(cg['contrast']) != float(1) or float(cg['saturation']) != float(1):
-    clip = adjust.Tweak(clip, bright=float(cg['brightness']) - float(1), cont=float(cg['contrast']), sat=float(cg['saturation']))
+cg = rc["color grading"]
+
+brightness = float(cg["brightness"])
+contrast = float(cg["contrast"])
+saturation = float(cg["saturation"])
+hue = float(cg["hue"])
+
+if brightness != 1.0 or contrast != 1.0 or saturation != 1.0 or hue != 0.0:
+    clip = adjust.Tweak(
+        clip,
+        hue=hue,
+        sat=saturation,
+        bright=brightness - 1.0,
+        cont=contrast,
+    )
 # color grading
 
 clip.set_output()
