@@ -96,6 +96,20 @@ if (dt := rc['miscellaneous']['dedup threshold']).lower() not in NO:
     )
 # deduplication
 
+
+def Masking(
+        to_mask: vs.VideoNode,
+        original_clip: vs.VideoNode,
+        mask_path: str):
+    if (ip := rc['interpolation'])['enabled'].lower() in YES:
+        original_clip = havsfunc.ChangeFPS(original_clip, float(ip['fps']))
+    rmask = core.ffms2.Source(mask_path)
+    feathered_mask = rmask.std.Minimum().std.BoxBlur(vradius=6, hradius=6, vpasses=2, hpasses=2)
+
+    return core.std.MaskedMerge(clipa=original_clip, clipb=to_mask, mask=feathered_mask, first_plane=True)
+# mask func
+
+
 if (pi := rc['pre-interp'])['enabled'].lower() in YES:
 
     if pi['model'].lower() not in NO:
@@ -136,6 +150,7 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
 
 
 if (ip := rc['interpolation'])['enabled'].lower() in YES:
+    original = clip
 
     if ip['area'].lower() in NO:
         area = None
@@ -158,6 +173,22 @@ if (ip := rc['interpolation'])['enabled'].lower() in YES:
         OverrideAlgo=int(ip['algorithm']),
         OverrideArea=area
     )
+    
+    if (mask := ip['mask']).lower() not in NO:
+
+        mask = mask.strip('"')
+
+        if not path.exists(mask):
+            raise ValueError(
+                "The path of the mask you specify must be absolute"
+                " (get it by doing shift-right click the image -> Copy As Path)"
+            )
+
+    clip = Masking(
+        to_mask=clip,
+        original_clip=original,
+        mask_path=mask
+    )
 # interpolation
 
 
@@ -178,17 +209,6 @@ if (fbd := rc['frame blending'])['enabled'].lower() in YES:
     else:
         clip = blending.FrameBlend(clip, fbd, rc['miscellaneous']['always verbose'].lower() in YES)
 # frame blending
-
-
-def Masking(
-        to_mask: vs.VideoNode,
-        original_clip: vs.VideoNode,
-        mask_path: str):
-    rmask = core.ffms2.Source(mask_path)
-    featherMask = rmask.std.Minimum().std.BoxBlur(vradius=6, hradius=6, vpasses=2, hpasses=2)
-
-    return core.std.MaskedMerge(clipa=to_mask, clipb=original_clip, mask=featherMask, first_plane=True)
-# mask func
 
 
 if (flb := rc['flowblur'])['enabled'].lower() in YES and rc['flowblur']['enabled'].lower() not in NO:
