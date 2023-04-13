@@ -184,11 +184,11 @@ if (ip := rc['interpolation'])['enabled'].lower() in YES:
                 " (get it by doing shift-right click the image -> Copy As Path)"
             )
 
-    clip = Masking(
-        to_mask=clip,
-        original_clip=original,
-        mask_path=mask
-    )
+        clip = Masking(
+            to_mask=clip,
+            original_clip=original,
+            mask_path=mask
+        )
 # interpolation
 
 
