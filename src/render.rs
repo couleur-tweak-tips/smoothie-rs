@@ -133,8 +133,7 @@ pub fn vspipe_render(commands: Vec<SmCommand>) {
     }
 }
 
-pub fn _vpipe_render2 (commands: Vec<SmCommand>){
-
+pub fn _vpipe_render2(commands: Vec<SmCommand>) {
     for cmd in commands {
         let previewing: bool =
             cmd.recipe.get_bool("preview window", "enabled") && cmd.ffplay_args.is_some();
@@ -149,7 +148,6 @@ pub fn _vpipe_render2 (commands: Vec<SmCommand>){
         }
 
         if true {
-
             let mut vs = Command::new(cmd.vs_path)
                 .args(cmd.vs_args)
                 .stdout(Stdio::piped())
@@ -169,7 +167,6 @@ pub fn _vpipe_render2 (commands: Vec<SmCommand>){
                 .spawn()
                 .expect("Failed in spawning FFmpeg child");
 
-
             if previewing {
                 let ffplay_pipe = ffmpeg.stdout.take().expect("Failed piping out of FFmpeg");
                 let ffplay = Command::new(cmd.ffplay_path.unwrap())
@@ -182,8 +179,7 @@ pub fn _vpipe_render2 (commands: Vec<SmCommand>){
 
             vs.wait_with_output().unwrap();
             ffmpeg.wait_with_output().unwrap();
-        }
-        else {
+        } else {
             let mut vs = Command::new(cmd.vs_path)
                 .args(cmd.vs_args)
                 .stdout(Stdio::piped())

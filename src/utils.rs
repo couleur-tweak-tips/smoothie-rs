@@ -2,7 +2,6 @@ use crate::recipe::Recipe;
 use std::env;
 use std::ffi::c_int;
 
-
 #[cfg(windows)]
 #[allow(non_snake_case)]
 extern "C" {

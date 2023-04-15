@@ -20,7 +20,6 @@ fn time_to_secs(x: &regex::Captures) -> Result<usize, std::num::ParseIntError> {
 
 #[allow(dead_code)]
 pub fn ffmpeg2(ffmpeg: ChildStderr) -> Result<(), std::io::Error> {
-
     let mut reader = std::io::BufReader::new(ffmpeg);
 
     let mut pb = RichProgress::new(

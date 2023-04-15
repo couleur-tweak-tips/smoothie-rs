@@ -1,14 +1,13 @@
 use crate::cli::Arguments;
 use crate::recipe::{parse_recipe, Recipe};
+use crate::verb;
 use color_eyre::owo_colors::OwoColorize;
 use colored::Colorize;
 use serde::Deserialize;
+use std::env;
 use std::env::current_exe;
 use std::time::Duration;
 use ureq::{Agent, Error as uReqError};
-use crate::verb;
-use std::env;
-
 
 pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
     let input_enc_args = if args.encargs.is_some() {
