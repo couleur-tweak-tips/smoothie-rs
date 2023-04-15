@@ -3,6 +3,7 @@ use ffprobe::FfProbe;
 use rand::seq::SliceRandom;
 use rfd::FileDialog;
 use std::{collections::HashMap, fs, path::PathBuf};
+use which::which;
 
 #[derive(Debug, Clone)]
 pub struct Payload {
@@ -170,6 +171,10 @@ pub fn resolve_outpath(
 pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
     let mut payloads: Vec<Payload> = vec![];
     let mut videos: Vec<(PathBuf, FfProbe, Option<Vec<Timecodes>>)> = vec![];
+
+    if which("ffprobe").is_err() {
+        panic!("ffprobe is not installed/in PATH, ensure FFmpeg is installed.");
+    }
 
     // Option 1: launched a shortcut that had --tui in args
     if args.tui && args.input.is_empty() && args.json.is_none() {
