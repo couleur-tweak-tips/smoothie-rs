@@ -1,27 +1,28 @@
 # vi: ft=python
 # I try to respect PEP 8 where I can, please do as well 👍
 
+import json  # for .loads
+from scripts import filldrops
+from scripts import adjust
+from scripts import weighting
+from scripts import blending
+from scripts import havsfunc
 import vapoursynth as vs
 from vapoursynth import core
 
 from os import path  # filepath handling
 import sys
 
-path_dirname = path.dirname(__file__).replace('\\\\?\\', '')  # .replace because windows
+path_dirname = path.dirname(__file__).replace(
+    '\\\\?\\', '')  # .replace because windows
 
 if path_dirname not in sys.path:  # Sometimes isn't by default
     sys.path.append(path_dirname)
 
 # in order of (optional) use
-from scripts import havsfunc
-from scripts import blending
-from scripts import weighting
-from scripts import adjust
-from scripts import filldrops
 
 # import scripts  # Import every .py script modules from /plugins/
 
-import json  # for .loads
 
 for var in ['input_video', 'recipe']:
     if var not in vars():
@@ -37,7 +38,8 @@ except json.decoder.JSONDecodeError:
     print(f"\n\nRecipe: {recipe}\n")
     raise Exception("Failed to parse the passed recipe as a JSON string")
 
-YES: list = ['on', 'True', 'true', 'yes', 'y', '1', 'yeah', 'yea', 'yep', 'sure', 'positive', True]
+YES: list = ['on', 'True', 'true', 'yes', 'y', '1',
+             'yeah', 'yea', 'yep', 'sure', 'positive', True]
 NO: list = [
     'off', 'False', 'false', 'no', 'n', 'nah', 'nope', 'negative', 'negatory',
     '0', '0.0', 'null', '', ' ', '  ', '\t', 'none', None, False
@@ -98,7 +100,8 @@ def resolve_mask_path(folder_path: str, file_name: str):
 
     if not path.exists(mask_path):
 
-        default_mask_dir = path.join(path.dirname(path.dirname(__file__)), "artifact masks")
+        default_mask_dir = path.join(path.dirname(
+            path.dirname(__file__)), "artifact masks")
 
         mask_path = path.join(default_mask_dir, file_name)
 
@@ -137,15 +140,14 @@ if (dt := rc['miscellaneous']['dedup threshold']).lower() not in NO:
         clip,
         thresh=float(dt)
     )
-
-
 # deduplication
 
 
 def Masking(
         to_mask: vs.VideoNode,
         original_clip: vs.VideoNode,
-        og_fps_adjust: int | None  # optional
+        og_fps_adjust: int = None,  # optional
+        rife: bool = None  # optional
 ):
     if MASK_PATH is None:
         return to_mask
@@ -153,14 +155,18 @@ def Masking(
     if og_fps_adjust is not None:
         original_clip = havsfunc.ChangeFPS(original_clip, og_fps_adjust)
 
-    mask_src = core.ffms2.Source(MASK_PATH)  # technically a source as well, but it's 1 image, we chill
+    # technically a source as well, but it's 1 image, we chill
+    mask_src = core.ffms2.Source(MASK_PATH)
+
+    if rife is not None:
+        mask_src = core.resize.Bicubic(clip=mask_src, format=vs.RGBS)
 
     if rc['artifact masking']['feathering'] in YES:
-        mask_src = mask_src.std.Minimum().std.BoxBlur(vradius=6, hradius=6, vpasses=2, hpasses=2)
+        mask_src = mask_src.std.Minimum().std.BoxBlur(
+            vradius=6, hradius=6, vpasses=2, hpasses=2)
 
-    return core.std.MaskedMerge(clipa=to_mask, clipb=original_clip, mask=mask_src, first_plane=True)
-
-
+    return core.std.MaskedMerge(
+        clipa=original_clip, clipb=to_mask, mask=mask_src, first_plane=True)
 # mask func
 
 
@@ -170,15 +176,18 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
 
     if not path.isdir(model_path):
 
-        default_model_dir = path.join(path.dirname(path.dirname(__file__)), "models")
+        default_model_dir = path.join(
+            path.dirname(path.dirname(__file__)), "models")
 
         relative_model_path = path.join(default_model_dir, model_path)
 
         if path.isfile(relative_model_path):
-            raise NotADirectoryError("You need to specify the model's directory, not a file")
+            raise NotADirectoryError(
+                "You need to specify the model's directory, not a file")
 
         if not path.isdir(relative_model_path):
-            eprint(f"\n\ndefault_model_dir does not exist, expected: {relative_model_path}")
+            eprint(
+                f"\n\ndefault_model_dir does not exist, expected: {relative_model_path}")
             raise NotADirectoryError("Could not find RIFE model directory..")
 
         model_path = relative_model_path
@@ -189,7 +198,6 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
 
     if pi['masking'] in YES:
         og_clip = clip
-        og_fps = clip.fps
 
     # * Plugin from https://github.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan#usage
     clip = core.rife.RIFE(
@@ -208,7 +216,8 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
         clip = Masking(
             to_mask=clip,
             original_clip=og_clip,
-            og_fps_adjust=og_fps
+            og_fps_adjust=clip.fps,
+            rife=True
         )
 
     clip = core.resize.Bicubic(clip=clip, format=og_format, matrix=og_matrix)
@@ -232,7 +241,6 @@ if (ip := rc['interpolation'])['enabled'].lower() in YES:
 
     if ip['masking'] in YES:
         og_clip = clip
-        og_fps = clip.fps
 
     clip = havsfunc.InterFrame(
         Input=clip,
@@ -249,16 +257,15 @@ if (ip := rc['interpolation'])['enabled'].lower() in YES:
         clip = Masking(
             to_mask=clip,
             original_clip=og_clip,
-            og_fps_adjust=og_fps
+            og_fps_adjust=clip.fps
         )
 # interpolation
 
 
-if (out := float(rc['timescale']['out'])) != 1:  # Output timescale, done after interpolation
+# Output timescale, done after interpolation
+if (out := float(rc['timescale']['out'])) != 1:
 
     clip = core.std.AssumeFPS(clip, fpsnum=int(clip.fps * out))
-
-
 # output timescale
 
 
@@ -278,7 +285,8 @@ def FlowBlur(
     # to be honest with you, I got no heckin idea how to configure this
     # mess with it and suggest what looks better 👍
     super_clip = core.mv.Super(clip, 16, 16, rfilter=3)
-    backwards_vectors = core.mv.Analyse(super_clip, isb=True, blksize=16, plevel=2, dct=5)
+    backwards_vectors = core.mv.Analyse(
+        super_clip, isb=True, blksize=16, plevel=2, dct=5)
     forward_vectors = core.mv.Analyse(super_clip, blksize=16, plevel=2, dct=5)
 
     clip = core.mv.FlowBlur(
@@ -294,11 +302,8 @@ def FlowBlur(
 
     return Masking(
         to_mask=clip,
-        original_clip=original,
-        og_fps_adjust=None
+        original_clip=original
     )
-
-
 # def FlowBlur
 
 
@@ -313,7 +318,8 @@ if (fbd := rc['frame blending'])['enabled'].lower() in YES:
         verb("No weighting mode passed: defaulting to equal")
         fbd['weighting'] = 'equal'
 
-    if fbd['fps'].lower() not in NO and float(fbd['fps']) >= ((clip.fps_num / clip.fps_den) + 1):
+    if fbd['fps'].lower() not in NO and float(
+            fbd['fps']) >= ((clip.fps_num / clip.fps_den) + 1):
 
         verb('Input video FPS is lower or equal compared to frame blending FPS, skipping frame blending')
     else:
@@ -330,8 +336,8 @@ if (fbd := rc['frame blending'])['enabled'].lower() in YES:
         clip = havsfunc.ChangeFPS(clip, int(fbd['fps']))
         verb(
             f'Blending {fps} down to {fbd["fps"]} @ {fbd["intensity"]} intensity ({len(weights)} blur-frames) ' +
-            f"using '{fbd['weighting']}' => " + blending.format_vec(weights)
-        )
+            f"using '{fbd['weighting']}' => " +
+            blending.format_vec(weights))
 # frame blending
 
 
@@ -357,7 +363,8 @@ if (lt := rc['lut'])['enabled'].lower() in YES:
     if (rc['lut'])['path'].lower() in NO:
         eprint("LUT filter was enabled, but no path was passed, skipping.. ")
     else:
-        eprint(f"Adding a LUT with an opacity of {lt['opacity']}%, path: {lt['path']}")
+        eprint(
+            f"Adding a LUT with an opacity of {lt['opacity']}%, path: {lt['path']}")
 
         og_format = clip.format
         # enforcing matrix? absolutely
@@ -366,5 +373,6 @@ if (lt := rc['lut'])['enabled'].lower() in YES:
         lut_clip = core.resize.Bicubic(lut_clip, format=og_format, matrix=1)
 
         clip = core.std.Merge(clip, lut_clip, weight=float(lt['opacity']))
+# lut
 
 clip.set_output()
