@@ -175,7 +175,7 @@ def _test_weights():
         print(f'{fps} -> {ofps} @ {intensity} using "{t}" =>', format_vec(vals), end='\n\n')
 
 
-def FrameBlend(clip: vs.VideoNode, fbd: dict, is_verbose: bool) -> vs.VideoNode:
+def FrameBlend(clip: vs.VideoNode, fbd: dict, is_verbose: bool, weights: list[float]) -> vs.VideoNode:
 
     # duplicated code I know... let me know a better way to bring them into scope.
     def verb(msg):
@@ -185,14 +185,6 @@ def FrameBlend(clip: vs.VideoNode, fbd: dict, is_verbose: bool) -> vs.VideoNode:
     YES: list = ['on', 'True', 'true', 'yes', 'y', '1', 'yeah', 'yea', 'yep', 'sure', 'positive', True]
     NO: list = ['off', 'False', 'false', 'no', 'n', 'nah', 'nope', 'negative', 'negatory', '0', 'null', '', ' ', '  ',
                 '\t', 'none', None, False]
-
-    weights = parse_weights2(clip, fbd)
-
-    fps = round(clip.fps_num / clip.fps_den)
-
-    logging.debug(
-        f'{fps} {fbd["fps"]} @ {fbd["intensity"]} ({len(weights)} blur-frames) using "{fbd["weighting"]}" => ' + format_vec(
-            weights))
 
     if fbd["bright blend"] not in NO:
         og_format = clip.format
@@ -204,7 +196,5 @@ def FrameBlend(clip: vs.VideoNode, fbd: dict, is_verbose: bool) -> vs.VideoNode:
     if fbd["bright blend"] in YES:
 
         clip = core.resize.Bicubic(clip=clip, format=og_format, matrix=og_matrix, transfer_s="709", transfer_in_s="linear", matrix_s="709")
-
-    clip = havsfunc.ChangeFPS(clip, int(fbd['fps']))
 
     return clip
