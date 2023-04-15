@@ -1,4 +1,5 @@
 # vi: ft=python
+# I try to respect PEP 8 where I can, please do as well 👍
 
 import vapoursynth as vs
 from vapoursynth import core
@@ -37,8 +38,10 @@ except json.decoder.JSONDecodeError:
     raise Exception("Failed to parse the passed recipe as a JSON string")
 
 YES: list = ['on', 'True', 'true', 'yes', 'y', '1', 'yeah', 'yea', 'yep', 'sure', 'positive', True]
-NO: list = ['off', 'False', 'false', 'no', 'n', 'nah', 'nope', 'negative', 'negatory', '0', 'null', '', ' ', '  ', '\t',
-            'none', None, False]
+NO: list = [
+    'off', 'False', 'false', 'no', 'n', 'nah', 'nope', 'negative', 'negatory',
+    '0', '0.0', 'null', '', ' ', '  ', '\t', 'none', None, False
+]
 
 
 def verb(*msg, **kwargs):
@@ -50,8 +53,9 @@ def eprint(*msg, **kwargs):
     print("ERR:", *msg, file=sys.stderr, **kwargs)
 
 
-verb(f"Using vapoursynth bindings from {vs.__file__}")
-verb(rc)
+verb(f"CONTEXT: Using vapoursynth bindings from {vs.__file__}")
+verb(f"CONTEXT: __file__: {__file__}")
+# verb(rc)
 
 _, input_ext = path.splitext(input_video)
 
@@ -63,7 +67,7 @@ else:
     clip: vs.VideoNode = core.lsmas.LWLibavSource(
         # * Docs and plugin came from https://github.com/AkarinVS/L-SMASH-Works/tree/master/VapourSynth
 
-        source=input_video.replace("\\\\?\\", ""),
+        source=input_video.replace("\\\\?\\", "").strip('"'),
         # \\?\ caused by Rust's .canonicalize(), not supported by lsmas
 
         cache=int(rc['miscellaneous']['source indexing'].lower() in YES),
@@ -79,7 +83,43 @@ else:
         # * 3: Try hardware decoder in the order of CUVID->QSV. If none is available then use default software decoder.
 
     )
-# source
+# source plugin
+
+# haven't bothered adding an arg to this 😴
+# this is for nerdy-ahhh comparisons
+cap_fps = 0
+if cap_fps != 0:
+    eprint(f"CAPPING FRAME-RATE TO {cap_fps}")
+    clip = havsfunc.ChangeFPS(clip, cap_fps, 1)
+
+
+def resolve_mask_path(folder_path: str, file_name: str):
+    mask_path = path.join(folder_path, file_name)
+
+    if not path.exists(mask_path):
+
+        default_mask_dir = path.join(path.dirname(path.dirname(__file__)), "artifact masks")
+
+        mask_path = path.join(default_mask_dir, file_name)
+
+        if not path.exists(mask_path):
+            eprint(f"EXPECTED: {mask_path}")
+            raise ValueError(
+                "Could not resolve your mask's input path, \n"
+                "The path of the mask you specify must be absolute \n"
+                "(get it by doing shift-right click the image -> Copy As Path)"
+            )
+    return mask_path
+
+
+if (am := rc['artifact masking'])['enabled'].lower() in YES:
+    MASK_PATH = resolve_mask_path(
+        folder_path=am['folder path'],
+        file_name=am['file name']
+    )
+else:
+    MASK_PATH = None
+# mask path resolve
 
 
 if (in_scale := float(rc['timescale']['in'])) != 1.0:
@@ -88,34 +128,68 @@ if (in_scale := float(rc['timescale']['in'])) != 1.0:
 
 
 if (dt := rc['miscellaneous']['dedup threshold']).lower() not in NO:
+
+    # eprint("balls!")
+
     if (dt := rc['miscellaneous']['dedup threshold']).lower() in YES:
         dt = 0.001
     clip = filldrops.FillDrops(
         clip,
         thresh=float(dt)
     )
+
+
 # deduplication
+
+
+def Masking(
+        to_mask: vs.VideoNode,
+        original_clip: vs.VideoNode,
+        og_fps_adjust: int | None  # optional
+):
+    if MASK_PATH is None:
+        return to_mask
+
+    if og_fps_adjust is not None:
+        original_clip = havsfunc.ChangeFPS(original_clip, og_fps_adjust)
+
+    mask_src = core.ffms2.Source(MASK_PATH)  # technically a source as well, but it's 1 image, we chill
+
+    if rc['artifact masking']['feathering'] in YES:
+        mask_src = mask_src.std.Minimum().std.BoxBlur(vradius=6, hradius=6, vpasses=2, hpasses=2)
+
+    return core.std.MaskedMerge(clipa=to_mask, clipb=original_clip, mask=mask_src, first_plane=True)
+
+
+# mask func
+
 
 if (pi := rc['pre-interp'])['enabled'].lower() in YES:
 
-    if pi['model'].lower() not in NO:
-        if path.exists(pi['model']):
-            if path.isfile(pi['model']):
-                raise NotADirectoryError("You need to specify the model's directory, not file")
-            model_path = pi['model']
-        else:
-            default_model_dir = path.join(path.dirname(path.dirname(__file__)), "models")
-            if not path.isdir(default_model_dir):
-                eprint(f"\n\ndefault_model_dir does not exist, expected: {default_model_dir}")
-                raise NotADirectoryError()
-            model_path = path.join(model_path, pi['model'])
+    model_path = pi['model'].strip('"')
 
     if not path.isdir(model_path):
-        eprint(f"\n\nModel directory not found, expected: {default_model_dir}")
+
+        default_model_dir = path.join(path.dirname(path.dirname(__file__)), "models")
+
+        relative_model_path = path.join(default_model_dir, model_path)
+
+        if path.isfile(relative_model_path):
+            raise NotADirectoryError("You need to specify the model's directory, not a file")
+
+        if not path.isdir(relative_model_path):
+            eprint(f"\n\ndefault_model_dir does not exist, expected: {relative_model_path}")
+            raise NotADirectoryError("Could not find RIFE model directory..")
+
+        model_path = relative_model_path
 
     og_format = clip.format
-    og_matrix = 1#clip.get_frame(0).props._Matrix
-    clip = clip = core.resize.Bicubic(clip=clip, format=vs.RGBS)
+    og_matrix = clip.get_frame(0).props._Matrix
+    clip = core.resize.Bicubic(clip=clip, format=vs.RGBS)
+
+    if pi['masking'] in YES:
+        og_clip = clip
+        og_fps = clip.fps
 
     # * Plugin from https://github.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan#usage
     clip = core.rife.RIFE(
@@ -129,9 +203,17 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
         uhd=False,  # tune for 1440p+ content
         sc=False  # scene change
     )
-    #eprint(f"og_matrix:{og_matrix}")
-    clip = clip = core.resize.Bicubic(clip=clip, format=og_format, matrix=og_matrix)
-    #verb(f"pre-interp\n{clip}")
+
+    if pi['masking'] in YES:
+        clip = Masking(
+            to_mask=clip,
+            original_clip=og_clip,
+            og_fps_adjust=og_fps
+        )
+
+    clip = core.resize.Bicubic(clip=clip, format=og_format, matrix=og_matrix)
+    # eprint(f"og_matrix:{og_matrix}")
+    # eprint(f"pre-interp\n{clip}")
 # pre-interp
 
 
@@ -141,12 +223,16 @@ if (ip := rc['interpolation'])['enabled'].lower() in YES:
         area = None
     else:
         area = int(ip['area'])
-        
+
     if ip['fps'].endswith("x") or ip['fps'].startswith("x"):
         ip['fps'] = int(ip['fps'].strip('x')) * clip.fps
 
     # * Adjusted InterFrame from havsfunc,support 10bit with new svp
     # * Source: https://github.com/xyx98/my-vapoursynth-script/blob/master/xvs.py
+
+    if ip['masking'] in YES:
+        og_clip = clip
+        og_fps = clip.fps
 
     clip = havsfunc.InterFrame(
         Input=clip,
@@ -158,13 +244,68 @@ if (ip := rc['interpolation'])['enabled'].lower() in YES:
         OverrideAlgo=int(ip['algorithm']),
         OverrideArea=area
     )
+
+    if ip['masking'] in YES:
+        clip = Masking(
+            to_mask=clip,
+            original_clip=og_clip,
+            og_fps_adjust=og_fps
+        )
 # interpolation
 
 
 if (out := float(rc['timescale']['out'])) != 1:  # Output timescale, done after interpolation
 
     clip = core.std.AssumeFPS(clip, fpsnum=int(clip.fps * out))
+
+
 # output timescale
+
+
+# my mv.FlowBlur helper
+def FlowBlur(
+        clip: vs.VideoNode,
+        flb: dict
+) -> vs.VideoNode | None:
+    if flb['masking'].lower() not in NO:
+        original = clip  # makes a "backup"
+
+    if flb['amount'].lower() in NO:
+        return clip
+    verb(flb)
+    verb(f"Flowblurring @ {flb['intensity']} intensity")
+
+    # to be honest with you, I got no heckin idea how to configure this
+    # mess with it and suggest what looks better 👍
+    super_clip = core.mv.Super(clip, 16, 16, rfilter=3)
+    backwards_vectors = core.mv.Analyse(super_clip, isb=True, blksize=16, plevel=2, dct=5)
+    forward_vectors = core.mv.Analyse(super_clip, blksize=16, plevel=2, dct=5)
+
+    clip = core.mv.FlowBlur(
+        clip,
+        super_clip,
+        backwards_vectors,
+        forward_vectors,
+        blur=int(rc['flowblur']['amount'])
+    )
+
+    if flb['masking'] not in YES:
+        return clip
+
+    return Masking(
+        to_mask=clip,
+        original_clip=original,
+        og_fps_adjust=None
+    )
+
+
+# def FlowBlur
+
+
+if rc['flowblur']['do blending'] == 'before' and rc['flowblur']['enabled'].lower() in YES:
+    clip = FlowBlur(clip, rc['flowblur'])
+# flowblur (before)
+
 
 if (fbd := rc['frame blending'])['enabled'].lower() in YES:
 
@@ -172,61 +313,58 @@ if (fbd := rc['frame blending'])['enabled'].lower() in YES:
         verb("No weighting mode passed: defaulting to equal")
         fbd['weighting'] = 'equal'
 
-    if float(fbd['fps']) >= ((clip.fps_num / clip.fps_den) + 1):
+    if fbd['fps'].lower() not in NO and float(fbd['fps']) >= ((clip.fps_num / clip.fps_den) + 1):
 
         verb('Input video FPS is lower or equal compared to frame blending FPS, skipping frame blending')
     else:
-        clip = blending.FrameBlend(clip, fbd, rc['miscellaneous']['always verbose'].lower() in YES)
+        weights = blending.parse_weights2(clip, fbd)
+
+        clip = blending.FrameBlend(
+            clip,
+            fbd,
+            rc['miscellaneous']['always verbose'].lower() in YES,
+            weights=weights)
+
+        fps = round(clip.fps_num / clip.fps_den)
+
+        clip = havsfunc.ChangeFPS(clip, int(fbd['fps']))
+        verb(
+            f'Blending {fps} down to {fbd["fps"]} @ {fbd["intensity"]} intensity ({len(weights)} blur-frames) ' +
+            f"using '{fbd['weighting']}' => " + blending.format_vec(weights)
+        )
 # frame blending
 
 
-def Masking(
-        to_mask: vs.VideoNode,
-        original_clip: vs.VideoNode,
-        mask_path: str):
-    rmask = core.ffms2.Source(mask_path)
-    featherMask = rmask.std.Minimum().std.BoxBlur(vradius=6, hradius=6, vpasses=2, hpasses=2)
-
-    return core.std.MaskedMerge(clipa=to_mask, clipb=original_clip, mask=featherMask, first_plane=True)
-# mask func
+if rc['flowblur']['do blending'] == 'after' and rc['flowblur']['enabled'].lower() in YES:
+    clip = FlowBlur(clip, rc['flowblur'])
+# flowblur (after)
 
 
-if (flb := rc['flowblur'])['enabled'].lower() in YES and rc['flowblur']['enabled'].lower() not in NO:
-    pass
-
-    if flb['mask'].lower() not in NO:
-        original = clip  # makes a "backup"
-
-    # to be honest with you, I got no heckin idea how to configure this
-    # mess with it and suggest what looks better 👍
-    super_clip = core.mv.Super(clip, 16, 16, rfilter=3)
-    backwards_vectors = core.mv.Analyse(super_clip, isb=True, blksize=16, plevel=2, dct=5)
-    forward_vectors = core.mv.Analyse(super_clip, blksize=16, plevel=2, dct=5)
-    clip = core.mv.FlowBlur(
+if (cg := rc['color grading'])['enabled'].lower() in YES:
+    clip = adjust.Tweak(
         clip,
-        super_clip,
-        backwards_vectors,
-        forward_vectors,
-        blur=rc['flowblur']['amount']
+        hue=float(cg['hue']),
+        cont=float(cg['contrast']),
+        sat=float(cg['saturation']),
+        bright=float(cg['brightness']),
+        coring=cg['coring'] in YES
     )
+# color grading
 
-    if (mask := flb['mask']).lower() not in NO:
 
-        mask = mask.strip('"')
+if (lt := rc['lut'])['enabled'].lower() in YES:
 
-        if not path.exists(mask):
-            raise ValueError(
-                "The path of the mask you specify must be absolute"
-                " (get it by doing shift-right click the image -> Copy As Path)"
-            )
+    if (rc['lut'])['path'].lower() in NO:
+        eprint("LUT filter was enabled, but no path was passed, skipping.. ")
+    else:
+        eprint(f"Adding a LUT with an opacity of {lt['opacity']}%, path: {lt['path']}")
 
-        clip = Masking(
-            to_mask=clip,
-            original_clip=original,
-            mask_path=mask
-        )
-        verb("flowblur\n")
-        verb(clip)
-# flowblur
+        og_format = clip.format
+        # enforcing matrix? absolutely
+        lut_clip = core.resize.Bicubic(clip, format=vs.RGB48)
+        lut_clip = lut_clip.timecube.Cube(cube=lt['path'].strip('"'))
+        lut_clip = core.resize.Bicubic(lut_clip, format=og_format, matrix=1)
+
+        clip = core.std.Merge(clip, lut_clip, weight=float(lt['opacity']))
 
 clip.set_output()
