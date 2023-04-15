@@ -6,6 +6,9 @@ use serde::Deserialize;
 use std::env::current_exe;
 use std::time::Duration;
 use ureq::{Agent, Error as uReqError};
+use crate::verb;
+use std::env;
+
 
 pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
     let input_enc_args = if args.encargs.is_some() {
@@ -53,7 +56,7 @@ pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
         if enc_arg_presets.contains_key("MACROS") {
             let macros = enc_arg_presets.get_section("MACROS");
             if macros.contains_key(word) {
-                println!("Pushing {word:?} as macro");
+                verb!("Pushing {word:?} as macro");
                 ret.push_str(
                     macros
                         .get(word)
@@ -66,7 +69,7 @@ pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
         if !codec.is_empty() {
             let codec_category = enc_arg_presets.get_section(&codec);
             if enc_arg_presets.clone().contains_key(&codec.to_uppercase()) {
-                println!("Pushing {word:?} as an enc preset");
+                verb!("Pushing {word:?} as an enc preset");
                 ret.push_str(
                     codec_category
                         .get(&*str::to_uppercase(word))
@@ -76,13 +79,13 @@ pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
         } else if codec_options.contains(&word.to_string()) {
             for option in enc_arg_presets.keys() {
                 if option.contains(word) {
-                    println!("Found {option:?} for {word}");
+                    verb!("Found {option:?} for {word}");
                     codec = option.clone();
                 }
             }
             // codec = word.to_lowercase().to_string();
         } else {
-            println!("Pushing {word:?} as normal str");
+            verb!("Pushing {word:?} as normal str");
             ret.push_str(word);
         }
     }

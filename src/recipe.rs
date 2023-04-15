@@ -5,6 +5,8 @@ use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use crate::verb;
+
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Recipe {
@@ -82,7 +84,7 @@ impl Recipe {
 
 pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
     assert!(ini.exists(), "Recipe at path `{ini:?}` does not exist");
-    println!(
+    verb!(
         "Parsing: {}",
         ini.display().to_string().replace("\\\\?\\", "")
     );
@@ -163,7 +165,7 @@ pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
     }
 }
 
-pub fn get_recipe(args: &Arguments) -> Recipe {
+pub fn get_recipe(args: &mut Arguments) -> Recipe {
     let exe = match env::current_exe() {
         Ok(exe) => exe,
         Err(e) => panic!("Could not resolve Smoothie's binary path: {}", e),
@@ -212,8 +214,14 @@ pub fn get_recipe(args: &Arguments) -> Recipe {
         }
     }
 
-    // dbg!(&rc);
-    // println!("rc: {:?}", rc);
+    if args.verbose || rc.get_bool("miscellaneous", "always verbose") {
+        args.verbose = true;
+        rc.insert_value(
+            "miscellaneous",
+            "always verbose".to_owned(),
+            "yes".to_owned(),
+        );
+    }
 
     rc
 }
