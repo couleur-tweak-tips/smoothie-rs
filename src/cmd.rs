@@ -6,6 +6,9 @@ use crate::parse::parse_encoding_args;
 use crate::recipe::Recipe;
 use crate::video::Payload;
 
+use crate::verb;
+use std::env;
+
 #[derive(Debug)]
 pub struct SmCommand {
     pub vs_path: String,
@@ -65,10 +68,10 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
     let bin_dir_vspipe = cur_exe_dir.join(vs_bin);
     let vspipe_in_path = which("vspipe");
     let vs_path = (if bin_dir_vspipe.exists() {
-        println!("Using vspipe that's in same directory as binary");
+        verb!("Using vspipe that's in same directory as binary");
         bin_dir_vspipe
     } else if vspipe_in_path.is_ok() {
-        println!("Using VSPipe from PATH");
+        verb!("Using VSPipe from PATH");
         vspipe_in_path.unwrap()
     } else {
         panic!("vspipe binary in path/bin dir not found");
@@ -78,18 +81,19 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
 
     let vpy_path = if args.vpy.exists() {
         args.vpy
-    } else if cur_exe_dir.join(&args.vpy).exists() {
-        cur_exe_dir.join(args.vpy)
+    } else if cur_exe_dir.parent().unwrap().join(&args.vpy).exists() {
+        cur_exe_dir.parent().unwrap().join(&args.vpy)
     } else {
         panic!(
             "jamba.vpy not found, expected {:?}",
-            cur_exe_dir.join(&args.vpy)
+            cur_exe_dir.parent().unwrap().join(&args.vpy)
         );
     };
 
     let rc_string = serde_json::to_string(&recipe).expect("Failed serializing recipe to JSON");
 
     let vs_args = vec![
+        // "--progress".to_owned(),
         "--container".to_owned(),
         "y4m".to_owned(),
         "-".to_owned(),
@@ -124,6 +128,7 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
         let mut cur_cmd_arguments = cmd_arguments.clone();
 
         if args.tompv {
+            // nothing to do, but this still needs to step in to break out the if chain
         } else if args.tonull {
             cur_cmd_arguments.append(&mut vec![
                 "-i".to_owned(),
@@ -149,6 +154,16 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
             }
             cur_cmd_arguments.append(&mut enc_args);
             cur_cmd_arguments.push(payload.out_path.display().to_string());
+
+            if recipe.get_bool("preview window", "enabled") {
+                let mut ffmpeg_preview_output: Vec<String> = recipe
+                    .get("preview window", "output args")
+                    .split(" ")
+                    .map(String::from)
+                    .collect();
+
+                cur_cmd_arguments.append(&mut ffmpeg_preview_output);
+            }
         }
 
         let (ffplay_path, ffplay_args) =
