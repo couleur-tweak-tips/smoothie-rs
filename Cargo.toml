@@ -29,6 +29,10 @@ anyhow = "1.0.69"
 ureq = { version = "2.6.2", features = ["json"] }
 cty = "0.2.2"
 bindgen = "0.64.0"
+min-max = "0.1.8"
+kdam = "0.1.7"
+indicatif = { version = "0.17.2", features = ["improved_unicode"] }
+regex = "1.7.2"
 
 [build-dependencies]
 winres = "0.1" # give the exe an icon
