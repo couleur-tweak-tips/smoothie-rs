@@ -1,5 +1,6 @@
 use rustsynth::{
     core::CoreRef,
+    format::SampleType,
     function::Function,
     node::Node,
     owned_map,
@@ -44,4 +45,70 @@ pub fn _change_fps<'elem, 'core: 'elem>(
         owned_map!(api, {"eval": &adjust_frame}, {"clip": &blank.get_node("clip").unwrap()});
     let eval = std.invoke("FrameEval", &in_args);
     eval.get_node("clip").unwrap()
+}
+
+pub fn inter_frame<'elem, 'core: 'elem>(
+    api: API,
+    core: CoreRef<'core>,
+    clip: Node<'core>,
+    params: InterFrameParams,
+) -> Result<Node<'elem>, &'static str> {
+    let info = clip.video_info().unwrap();
+
+    let sw = info.format.sub_sampling_w;
+    let sh = info.format.sub_sampling_h;
+    let depth = info.format.bits_per_sample;
+    if sw != 1 && sh != 1 && !vec![8, 10].contains(&depth) {
+        return Err("InterFrame: This is not a clip");
+    }
+    let oInput = clip;
+    // let clip = vsdepth(clip, 8);
+    // Validate inputs
+    let preset = params.Preset.to_lowercase();
+    let tuning = params.Tuning.to_lowercase();
+    if !["medium", "fast", "faster", "fastest"].contains(&preset.as_str()) {
+        return Err("");
+    }
+    if !["film", "smooth", "animation", "weak"].contains(&tuning.as_str()) {
+        return Err("");
+    }
+    todo!()
+}
+
+pub struct InterFrameParams {
+    Preset: String,
+    Tuning: String,
+    NewNum: Option<i64>,
+    NewDen: i64,
+    GPU: bool,
+    gpuid: i64,
+    OverrideAlgo: Option<String>,
+    OverrideArea: Option<String>,
+    FrameDouble: bool,
+}
+
+impl Default for InterFrameParams {
+    fn default() -> Self {
+        Self {
+            Preset: String::from("Medium"),
+            Tuning: String::from("Film"),
+            NewNum: None,
+            NewDen: 1,
+            GPU: true,
+            gpuid: 1,
+            OverrideAlgo: None,
+            OverrideArea: None,
+            FrameDouble: false,
+        }
+    }
+}
+
+pub fn vsdepth(clip: Node, bitdepth: i64) -> Node {
+    let info = clip.video_info().unwrap();
+    let curr_depth = info.format.bits_per_sample as i64;
+    let sample_type = SampleType::Integer;
+    if (curr_depth, info.format.sample_type) == (bitdepth, sample_type) {
+        return clip;
+    }
+    todo!()
 }

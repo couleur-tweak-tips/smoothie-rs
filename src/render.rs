@@ -2,8 +2,16 @@ use std::io::prelude::*;
 use std::io::BufReader;
 
 use crate::cmd::SmCommand;
-
+use crate::vapoursynth::output::{output, OutputParameters};
 use regex::Regex;
+use rustsynth::{
+    api::{CoreCreationFlags, API},
+    core::CoreRef,
+    map::OwnedMap,
+    node::Node,
+};
+use std::io::Cursor;
+use std::path::PathBuf;
 use std::process::{ChildStderr, Command, Stdio};
 
 use crate::{ffpb2, verb};
@@ -217,5 +225,51 @@ pub fn _vpipe_render2(commands: Vec<SmCommand>) {
                 // ffplay.wait_with_output().unwrap();
             }
         }
+    }
+}
+
+fn libav_smashsource(filepath: PathBuf, core: CoreRef, api: API) -> Node {
+    let lsmas = core.plugin_by_namespace("lsmas").unwrap();
+
+    let mut in_args = OwnedMap::new(api);
+    in_args
+        .set_data(
+            "source",
+            filepath
+                .display()
+                .to_string()
+                .replace("\\\\?\\", "")
+                .as_bytes(),
+        )
+        .expect("Failed setting input source parameter");
+    let map = lsmas.invoke("LWLibavSource", &in_args);
+
+    map.get("clip")
+        .expect("Failed getting clip from LWLibavSource")
+}
+
+pub fn api_render(commands: Vec<SmCommand>) {
+    let api = API::get().unwrap();
+    let core = api.create_core(CoreCreationFlags::NONE);
+
+    for cmd in commands {
+        let clip = libav_smashsource(cmd.payload.in_path, core, api);
+
+        let num_frames = clip.video_info().unwrap().num_frames as usize;
+
+        let mut buf: Cursor<Vec<u8>> = Cursor::new(Vec::new());
+
+        output(
+            &mut buf,
+            None,
+            OutputParameters {
+                y4m: true,
+                node: clip,
+                start_frame: 0,
+                end_frame: num_frames - 1,
+                requests: core.info().num_threads,
+            },
+        )
+        .expect("Failed outputting with output");
     }
 }

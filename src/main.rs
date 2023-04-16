@@ -54,9 +54,9 @@ fn main() {
         || env::var("NO_SMOOTHIE_WIN32").is_ok();
     // user is neither running Windows Terminal and alacritty, OR has NO_SMOOTHIE_WIN32 defined
 
+    #[cfg(target_os = "windows")]
     if args.tui
         && is_conhost
-        && cfg!(target_os = "windows")
         && !recipe.get_bool("miscellaneous", "always verbose")
         && !args.verbose
     {

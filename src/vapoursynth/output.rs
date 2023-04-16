@@ -2,7 +2,7 @@ use std::{
     cmp,
     collections::HashMap,
     fs::File,
-    io::Write,
+    io::{Cursor, Write},
     process::ChildStdin,
     sync::{Arc, Condvar, Mutex},
     time::Instant,
@@ -304,13 +304,13 @@ fn frame_done_callback<'core, T: Write + Send + 'core>(
 }
 
 pub fn output(
-    mut output_target: ChildStdin,
+    mut output_target: &mut Cursor<Vec<u8>>,
     mut timecodes_file: Option<File>,
     parameters: OutputParameters,
 ) -> Result<(), Error> {
     // Print the y4m header.
     if parameters.y4m {
-        print_y4m_header(&mut output_target, &parameters.node)
+        print_y4m_header(output_target, &parameters.node)
             .context("Couldn't write the y4m header")?;
     }
 
