@@ -2,16 +2,13 @@ use std::io::prelude::*;
 use std::io::BufReader;
 
 use crate::cmd::SmCommand;
+use crate::vapoursynth::lsmash::libav_smashsource;
 use crate::vapoursynth::output::{output, OutputParameters};
 use regex::Regex;
 use rustsynth::{
     api::{CoreCreationFlags, API},
-    core::CoreRef,
-    map::OwnedMap,
-    node::Node,
 };
 use std::io::Cursor;
-use std::path::PathBuf;
 use std::process::{ChildStderr, Command, Stdio};
 
 use crate::{ffpb2, verb};
@@ -226,26 +223,6 @@ pub fn _vpipe_render2(commands: Vec<SmCommand>) {
             }
         }
     }
-}
-
-fn libav_smashsource(filepath: PathBuf, core: CoreRef, api: API) -> Node {
-    let lsmas = core.plugin_by_namespace("lsmas").unwrap();
-
-    let mut in_args = OwnedMap::new(api);
-    in_args
-        .set_data(
-            "source",
-            filepath
-                .display()
-                .to_string()
-                .replace("\\\\?\\", "")
-                .as_bytes(),
-        )
-        .expect("Failed setting input source parameter");
-    let map = lsmas.invoke("LWLibavSource", &in_args);
-
-    map.get("clip")
-        .expect("Failed getting clip from LWLibavSource")
 }
 
 pub fn api_render(commands: Vec<SmCommand>) {
