@@ -1,8 +1,11 @@
 $ErrorActionPreference = "Stop"
+Get-Command curl, cargo -CommandType Application
 
 mkdir ./smoothie-rs/bin/
 
-curl -L https://github.com/couleurm/VSBundler/releases/latest/download/VapourSynth.7z -o"vapoursynth.7z"
+$curl = (Get-Command -Name curl -CommandType Application).Source | Select-Object -First 1
+
+& $curl -L https://github.com/couleurm/VSBundler/releases/latest/download/VapourSynth.7z -o"vapoursynth.7z"
 7z x vapoursynth.7z -osmoothie-rs/bin/
 mv smoothie-rs/bin/VapourSynth/* smoothie-rs/bin/
 rm smoothie-rs/bin/VapourSynth/
