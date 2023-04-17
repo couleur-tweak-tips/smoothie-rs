@@ -4,6 +4,7 @@
 import vapoursynth as vs
 from vapoursynth import core
 
+import os
 from os import path  # filepath handling
 import sys
 
@@ -59,30 +60,42 @@ verb(f"CONTEXT: __file__: {__file__}")
 
 _, input_ext = path.splitext(input_video)
 
+base_file_name = path.basename(input_video)
+temp_folder = os.environ['TEMP']
+cache_file = path.join(temp_folder, f"{base_file_name}-ffms2_index")
+
 if input_ext == '.avi':
 
     clip: vs.VideoNode = core.avisource.AVISource(input_video)
 else:
 
-    clip: vs.VideoNode = core.lsmas.LWLibavSource(
-        # * Docs and plugin came from https://github.com/AkarinVS/L-SMASH-Works/tree/master/VapourSynth
 
-        source=input_video.replace("\\\\?\\", "").strip('"'),
-        # \\?\ caused by Rust's .canonicalize(), not supported by lsmas
+    eprint(f"cache_file: {cache_file}")
 
-        cache=int(rc['miscellaneous']['source indexing'].lower() in YES),
-        # Smoothie comes bundled with the cachedir-tmp variant of this plugin
-        # * Create the index file (.lwi) to the same directory as the source file if set to 1.
-        # * The index file avoids parsing all frames in the source file at the next or later access.
-        # * Parsing all frames is very important for frame accurate seek.
-
-        prefer_hw=3
-        # * 0: Use default software decoder.
-        # * 1: Use NVIDIA CUVID acceleration for supported codec, otherwise use default software decoder.
-        # * 2: Use Intel Quick Sync Video acceleration for supported codec, otherwise use default software decoder.
-        # * 3: Try hardware decoder in the order of CUVID->QSV. If none is available then use default software decoder.
-
+    clip: vs.VideoNode = core.ffms2.Source(
+        source=input_video,
+        cachefile=cache_file,
     )
+
+    #clip: vs.VideoNode = core.lsmas.LWLibavSource(
+    #    # * Docs and plugin came from https://github.com/AkarinVS/L-SMASH-Works/tree/master/VapourSynth
+    #
+    #    source=input_video.replace("\\\\?\\", "").strip('"'),
+    #    # \\?\ caused by Rust's .canonicalize(), not supported by lsmas
+    #
+    #    cache=int(rc['miscellaneous']['source indexing'].lower() in YES),
+    #    # Smoothie comes bundled with the cachedir-tmp variant of this plugin
+    #    # * Create the index file (.lwi) to the same directory as the source file if set to 1.
+    #    # * The index file avoids parsing all frames in the source file at the next or later access.
+    #    # * Parsing all frames is very important for frame accurate seek.
+    #
+    #    prefer_hw=3
+    #    # * 0: Use default software decoder.
+    #    # * 1: Use NVIDIA CUVID acceleration for supported codec, otherwise use default software decoder.
+    #    # * 2: Use Intel Quick Sync Video acceleration for supported codec, otherwise use default software decoder.
+    #    # * 3: Try hardware decoder in the order of CUVID->QSV. If none is available then use default software decoder.
+    #
+    #)
 # source plugin
 
 # haven't bothered adding an arg to this 😴
@@ -94,6 +107,13 @@ if cap_fps != 0:
 
 
 def resolve_mask_path(folder_path: str, file_name: str):
+
+    if file_name in NO:
+        eprint(f"GOT: {folder_path} AND {file_name}")
+        raise ValueError(
+            "If masking is enabled you MUST provide `[artifact masking] file name:`"
+        )
+
     mask_path = path.join(folder_path, file_name)
 
     if not path.exists(mask_path):
@@ -135,7 +155,8 @@ if (dt := rc['miscellaneous']['dedup threshold']).lower() not in NO:
         dt = 0.001
     clip = filldrops.FillDrops(
         clip,
-        thresh=float(dt)
+        thresh=float(dt),
+        debug=True
     )
 
 
@@ -145,20 +166,25 @@ if (dt := rc['miscellaneous']['dedup threshold']).lower() not in NO:
 def Masking(
         to_mask: vs.VideoNode,
         original_clip: vs.VideoNode,
-        og_fps_adjust: int | None  # optional
 ):
     if MASK_PATH is None:
         return to_mask
 
-    if og_fps_adjust is not None:
-        original_clip = havsfunc.ChangeFPS(original_clip, og_fps_adjust)
+    if to_mask.fps != original_clip.fps:
+        original_clip = havsfunc.ChangeFPS(original_clip, fpsnum=to_mask.fps.numerator, fpsden=to_mask.fps.denominator)
 
-    mask_src = core.ffms2.Source(MASK_PATH)  # technically a source as well, but it's 1 image, we chill
+    og_clip_format = clip.format
+
+    # technically a source as well, but it's 1 image, we chill
+    mask_src = core.ffms2.Source(MASK_PATH)
+
+    if to_mask.format.name == 'RGBS':
+        mask_src = core.resize.Bicubic(clip=mask_src, format=vs.RGBS)
 
     if rc['artifact masking']['feathering'] in YES:
         mask_src = mask_src.std.Minimum().std.BoxBlur(vradius=6, hradius=6, vpasses=2, hpasses=2)
 
-    return core.std.MaskedMerge(clipa=to_mask, clipb=original_clip, mask=mask_src, first_plane=True)
+    return core.std.MaskedMerge(clipa=original_clip, clipb=to_mask, mask=mask_src, first_plane=True)
 
 
 # mask func
@@ -170,7 +196,7 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
 
     if not path.isdir(model_path):
 
-        default_model_dir = path.join(path.dirname(path.dirname(__file__)), "models")
+        default_model_dir = path.join(path.dirname(path.dirname(__file__)), "rife models")
 
         relative_model_path = path.join(default_model_dir, model_path)
 
@@ -187,14 +213,15 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
     og_matrix = clip.get_frame(0).props._Matrix
     clip = core.resize.Bicubic(clip=clip, format=vs.RGBS)
 
+    factor = pi['factor'].strip('x')
+
     if pi['masking'] in YES:
         og_clip = clip
-        og_fps = clip.fps
 
     # * Plugin from https://github.com/styler00dollar/VapourSynth-RIFE-ncnn-Vulkan#usage
     clip = core.rife.RIFE(
         clip=clip,
-        factor_num=str(pi['factor']).strip('x'),
+        factor_num=(pi['factor']).strip('x'),
         # multiplier=str(pi['factor']).strip('x'),
         model_path=model_path,
         gpu_id=0,
@@ -204,11 +231,11 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
         sc=False  # scene change
     )
 
+    verb('Masking pre-interp')
     if pi['masking'] in YES:
         clip = Masking(
             to_mask=clip,
-            original_clip=og_clip,
-            og_fps_adjust=og_fps
+            original_clip=og_clip
         )
 
     clip = core.resize.Bicubic(clip=clip, format=og_format, matrix=og_matrix)
@@ -232,7 +259,7 @@ if (ip := rc['interpolation'])['enabled'].lower() in YES:
 
     if ip['masking'] in YES:
         og_clip = clip
-        og_fps = clip.fps
+        new_fps = int(ip['fps'])
 
     clip = havsfunc.InterFrame(
         Input=clip,
@@ -248,8 +275,7 @@ if (ip := rc['interpolation'])['enabled'].lower() in YES:
     if ip['masking'] in YES:
         clip = Masking(
             to_mask=clip,
-            original_clip=og_clip,
-            og_fps_adjust=og_fps
+            original_clip=og_clip
         )
 # interpolation
 
@@ -292,10 +318,11 @@ def FlowBlur(
     if flb['masking'] not in YES:
         return clip
 
+    verb('Masking Flowblur')
     return Masking(
+        
         to_mask=clip,
-        original_clip=original,
-        og_fps_adjust=None
+        original_clip=original
     )
 
 
