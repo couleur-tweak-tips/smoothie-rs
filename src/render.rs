@@ -5,9 +5,7 @@ use crate::cmd::SmCommand;
 use crate::vapoursynth::lsmash::libav_smashsource;
 use crate::vapoursynth::output::{output, OutputParameters};
 use regex::Regex;
-use rustsynth::{
-    api::{CoreCreationFlags, API},
-};
+use rustsynth::api::{CoreCreationFlags, API};
 use std::io::Cursor;
 use std::process::{ChildStderr, Command, Stdio};
 
@@ -234,10 +232,19 @@ pub fn api_render(commands: Vec<SmCommand>) {
 
         let num_frames = clip.video_info().unwrap().num_frames as usize;
 
-        let mut buf: Cursor<Vec<u8>> = Cursor::new(Vec::new());
+        let mut ffmpeg = Command::new(cmd.ff_path)
+            .args(cmd.ff_args)
+            .stdin(std::process::Stdio::piped())
+            .stdout(Stdio::inherit())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .expect("Failed in spawning FFmpeg child");
+        let ffpipe = ffmpeg.stdin.take().unwrap();
+
+        let ff_stats = ffmpeg.stderr.take().expect("Failed capturing FFmpeg");
 
         output(
-            &mut buf,
+            ffpipe,
             None,
             OutputParameters {
                 y4m: true,
@@ -248,5 +255,9 @@ pub fn api_render(commands: Vec<SmCommand>) {
             },
         )
         .expect("Failed outputting with output");
+
+        ffpb2::ffmpeg2(ff_stats).expect("Failed rendering ffmpeg");
+
+        ffmpeg.wait().unwrap();
     }
 }

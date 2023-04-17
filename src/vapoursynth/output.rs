@@ -3,7 +3,7 @@ use std::{
     collections::HashMap,
     fs::File,
     io::{Cursor, Write},
-    process::ChildStdin,
+    process::{ChildStdin, Stdio},
     sync::{Arc, Condvar, Mutex},
     time::Instant,
 };
@@ -303,14 +303,14 @@ fn frame_done_callback<'core, T: Write + Send + 'core>(
     }
 }
 
-pub fn output(
-    mut output_target: &mut Cursor<Vec<u8>>,
+pub fn output<T: std::io::Write + std::marker::Send>(
+    mut output_target: T,
     mut timecodes_file: Option<File>,
     parameters: OutputParameters,
 ) -> Result<(), Error> {
     // Print the y4m header.
     if parameters.y4m {
-        print_y4m_header(output_target, &parameters.node)
+        print_y4m_header(&mut output_target, &parameters.node)
             .context("Couldn't write the y4m header")?;
     }
 

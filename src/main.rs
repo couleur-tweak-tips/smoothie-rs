@@ -65,7 +65,13 @@ fn main() {
 
     let payloads: Vec<Payload> = video::resolve_input(&mut args, &recipe);
 
+    let experimental = args.render_experimental;
+
     let commands: Vec<SmCommand> = cmd::build_commands(args, payloads, recipe);
 
-    render::_vpipe_render2(commands);
+    if experimental {
+        render::api_render(commands);
+    } else {
+        render::_vpipe_render2(commands);
+    }
 }

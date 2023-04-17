@@ -121,6 +121,10 @@ pub struct Arguments {
     /// Override recipe setting(s), e.g: --ov "flowblur;amount;40" "misc;container;MKV"
     #[clap(visible_alias="ov", visible_alias="overide", long, num_args=1..)]
     pub r#override: Option<Vec<String>>,
+
+    /// Specify a recipe path
+    #[clap(visible_alias = "rs_exp", long, default_value_t = false)]
+    pub render_experimental: bool,
 }
 
 pub fn setup_args() -> Arguments {
