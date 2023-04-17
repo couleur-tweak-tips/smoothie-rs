@@ -66,7 +66,7 @@ fn probe_video(input: &PathBuf) -> Option<FfProbe> {
     let probe = match ffprobe::ffprobe(path) {
         Ok(a) => a,
         Err(e) => {
-            println!(
+            eprintln!(
                 "Skipping input file `{:?}` (failed probing): {:?}",
                 &input, e
             );
@@ -172,8 +172,29 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
     let mut payloads: Vec<Payload> = vec![];
     let mut videos: Vec<(PathBuf, FfProbe, Option<Vec<Timecodes>>)> = vec![];
 
+    if which("ffmpeg").is_err() {
+        let term = if cfg!(target_os = "windows"){
+            "ffmpeg.exe"
+        } else {
+            "ffmpeg"
+        };
+        panic!("{term} is not installed/in PATH, ensure FFmpeg is installed.");
+    }
     if which("ffprobe").is_err() {
-        panic!("ffprobe is not installed/in PATH, ensure FFmpeg is installed.");
+        let term = if cfg!(target_os = "windows"){
+            "ffprobe.exe"
+        } else {
+            "ffprobe"
+        };
+        panic!("{term} is not installed/in PATH, ensure FFmpeg is installed.");
+    }
+    if recipe.get_bool("preview window", "enabled") {
+        let term = if cfg!(target_os = "windows"){
+            "ffplay.exe"
+        } else {
+            "ffplay"
+        };
+        panic!("You have the preview window enabled, but {term} is not installed/in PATH, ensure FULL FFmpeg is installed (ffmpeg, ffprobe and ffplay.");
     }
 
     // Option 1: launched a shortcut that had --tui in args
