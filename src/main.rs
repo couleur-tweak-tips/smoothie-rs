@@ -23,7 +23,7 @@ mod parse;
 mod recipe;
 mod render;
 mod utils;
-mod vapoursynth;
+//mod vapoursynth;
 mod video;
 
 use crate::{cli::Arguments, cmd::SmCommand, recipe::Recipe, video::Payload};
