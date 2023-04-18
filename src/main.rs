@@ -28,13 +28,15 @@ mod video;
 
 use crate::{cli::Arguments, cmd::SmCommand, recipe::Recipe, video::Payload};
 use std::env;
+use rustsynth::OwnedMap;
 use utils::verbosity_init;
+use vapoursynth::ffms2::SourceArgs;
 
 fn main() {
     if enable_ansi_support::enable_ansi_support().is_err() {
         println!("Failed enabling ANSI color support, expect broken colors!")
     }
-
+    
     // unused for now as it spams the API each time you launch it :/...
     // parse::parse_update();
 
@@ -67,10 +69,17 @@ fn main() {
 
     let experimental = args.render_experimental;
 
+    let vpy = args.vpy.exists();
+    let vpy_path = args.vpy.clone();
+
     let commands: Vec<SmCommand> = cmd::build_commands(args, payloads, recipe);
 
     if experimental {
-        render::api_render(commands);
+        if vpy {
+            render::api_vpy_render(commands, vpy_path);
+        } else {
+            render::api_render(commands);
+        }
     } else {
         render::_vpipe_render2(commands);
     }

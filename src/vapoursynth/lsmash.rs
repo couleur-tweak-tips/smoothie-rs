@@ -1,11 +1,11 @@
-use std::path::PathBuf;
+use std::path::Path;
 
-use rustsynth::{core::CoreRef, map::OwnedMap, node::Node, prelude::API};
+use rustsynth::{core::CoreRef, map::OwnedMap, node::Node};
 
-pub fn libav_smashsource(filepath: PathBuf, core: CoreRef, api: API) -> Node {
+pub fn libav_smashsource<'a>(filepath: &Path, core: CoreRef<'a>) -> Node<'a> {
     let lsmas = core.plugin_by_namespace("lsmas").unwrap();
 
-    let mut in_args = OwnedMap::new(api);
+    let mut in_args = OwnedMap::new();
     in_args
         .set_data(
             "source",

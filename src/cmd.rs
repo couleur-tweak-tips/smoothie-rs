@@ -9,7 +9,7 @@ use crate::video::Payload;
 use crate::verb;
 use std::env;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SmCommand {
     pub vs_path: String,
     pub vs_args: Vec<String>,

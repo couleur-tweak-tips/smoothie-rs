@@ -1,12 +1,15 @@
 use std::io::prelude::*;
 use std::io::BufReader;
+use std::path::PathBuf;
 
 use crate::cmd::SmCommand;
 use crate::vapoursynth::lsmash::libav_smashsource;
 use crate::vapoursynth::output::{output, OutputParameters};
 use regex::Regex;
-use rustsynth::api::{CoreCreationFlags, API};
-use std::io::Cursor;
+use rustsynth::core::CoreCreationFlags;
+use rustsynth::core::CoreRef;
+use rustsynth::node::Node;
+use rustsynth::vsscript::Environment;
 use std::process::{ChildStderr, Command, Stdio};
 
 use crate::{ffpb2, verb};
@@ -223,41 +226,54 @@ pub fn _vpipe_render2(commands: Vec<SmCommand>) {
     }
 }
 
+pub fn api_vpy_render(commands: Vec<SmCommand>, path: PathBuf) {
+    let core = CoreRef::new(CoreCreationFlags::NONE);
+    for cmd in commands {
+        let mut env = Environment::new(&core).unwrap();
+        env.eval_file(&path).unwrap();
+        let clip = env.get_output(0).unwrap();
+        render_node(cmd, clip, &core)
+    }
+}
+
 pub fn api_render(commands: Vec<SmCommand>) {
-    let api = API::get().unwrap();
-    let core = api.create_core(CoreCreationFlags::NONE);
+    let core = CoreRef::new(CoreCreationFlags::NONE);
 
     for cmd in commands {
-        let clip = libav_smashsource(cmd.payload.in_path, core, api);
+        let clip = libav_smashsource(&cmd.payload.in_path, core);
 
-        let num_frames = clip.video_info().unwrap().num_frames as usize;
-
-        let mut ffmpeg = Command::new(cmd.ff_path)
-            .args(cmd.ff_args)
-            .stdin(std::process::Stdio::piped())
-            .stdout(Stdio::inherit())
-            .stderr(std::process::Stdio::piped())
-            .spawn()
-            .expect("Failed in spawning FFmpeg child");
-        let ffpipe = ffmpeg.stdin.take().unwrap();
-
-        let ff_stats = ffmpeg.stderr.take().expect("Failed capturing FFmpeg");
-
-        output(
-            ffpipe,
-            None,
-            OutputParameters {
-                y4m: true,
-                node: clip,
-                start_frame: 0,
-                end_frame: num_frames - 1,
-                requests: core.info().num_threads,
-            },
-        )
-        .expect("Failed outputting with output");
-
-        ffpb2::ffmpeg2(ff_stats).expect("Failed rendering ffmpeg");
-
-        ffmpeg.wait().unwrap();
+        render_node(cmd, clip, &core);
     }
+}
+
+pub fn render_node(cmd: SmCommand, clip: Node, core: &CoreRef) {
+    let num_frames = clip.video_info().unwrap().num_frames as usize;
+
+    let mut ffmpeg = Command::new(cmd.ff_path)
+        .args(cmd.ff_args)
+        .stdin(std::process::Stdio::piped())
+        .stdout(Stdio::inherit())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .expect("Failed in spawning FFmpeg child");
+    let ffpipe = ffmpeg.stdin.take().unwrap();
+
+    let ff_stats = ffmpeg.stderr.take().expect("Failed capturing FFmpeg");
+
+    output(
+        ffpipe,
+        None,
+        OutputParameters {
+            y4m: true,
+            node: clip,
+            start_frame: 0,
+            end_frame: num_frames - 1,
+            requests: core.info().num_threads,
+        },
+    )
+    .expect("Failed outputting with output");
+
+    ffpb2::ffmpeg2(ff_stats).expect("Failed rendering ffmpeg");
+
+    ffmpeg.wait().unwrap();
 }

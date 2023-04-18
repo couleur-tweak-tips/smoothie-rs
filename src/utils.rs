@@ -1,5 +1,6 @@
 use crate::recipe::Recipe;
 use std::env;
+#[cfg(windows)]
 use std::ffi::c_int;
 
 #[cfg(windows)]
