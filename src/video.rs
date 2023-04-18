@@ -188,7 +188,7 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
         };
         panic!("{term} is not installed/in PATH, ensure FFmpeg is installed.");
     }
-    if recipe.get_bool("preview window", "enabled") {
+    if recipe.get_bool("preview window", "enabled") && which("ffplay").is_err() {
         let term = if cfg!(target_os = "windows"){
             "ffplay.exe"
         } else {
