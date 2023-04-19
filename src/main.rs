@@ -28,15 +28,13 @@ mod video;
 
 use crate::{cli::Arguments, cmd::SmCommand, recipe::Recipe, video::Payload};
 use std::env;
-use rustsynth::OwnedMap;
 use utils::verbosity_init;
-use vapoursynth::ffms2::SourceArgs;
 
 fn main() {
     if enable_ansi_support::enable_ansi_support().is_err() {
         println!("Failed enabling ANSI color support, expect broken colors!")
     }
-    
+
     // unused for now as it spams the API each time you launch it :/...
     // parse::parse_update();
 

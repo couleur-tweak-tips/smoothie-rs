@@ -3,13 +3,13 @@ use std::io::BufReader;
 use std::path::PathBuf;
 
 use crate::cmd::SmCommand;
-use crate::vapoursynth::lsmash::libav_smashsource;
 use crate::vapoursynth::output::{output, OutputParameters};
 use regex::Regex;
 use rustsynth::core::CoreCreationFlags;
 use rustsynth::core::CoreRef;
 use rustsynth::node::Node;
 use rustsynth::vsscript::Environment;
+use rustsynth_derive::init_plugins;
 use std::process::{ChildStderr, Command, Stdio};
 
 use crate::{ffpb2, verb};
@@ -239,8 +239,14 @@ pub fn api_vpy_render(commands: Vec<SmCommand>, path: PathBuf) {
 pub fn api_render(commands: Vec<SmCommand>) {
     let core = CoreRef::new(CoreCreationFlags::NONE);
 
+    init_plugins!();
+
     for cmd in commands {
-        let clip = libav_smashsource(&cmd.payload.in_path, core);
+
+        let clip =
+            Plugins::ffms2::Source(&core, cmd.payload.in_path.to_str().unwrap().to_owned())
+                .get_node("clip")
+                .unwrap();
 
         render_node(cmd, clip, &core);
     }
