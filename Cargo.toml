@@ -15,6 +15,7 @@ rfd = "0.11.0"  # open file dialog
 which = "4.4.0" # Get-Command / where.exe / which alternative
 # rustsynth = "0.2.1" # wrapper for VapourSynth.dll
 rustsynth = {git = "https://github.com/animafps/rustsynth"}
+rustsynth-derive = {git = "https://github.com/animafps/rustsynth"}
 
 # json stuff
 serde = "1.0.152" 
