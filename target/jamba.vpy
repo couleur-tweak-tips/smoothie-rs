@@ -155,8 +155,7 @@ if (dt := rc['miscellaneous']['dedup threshold']).lower() not in NO:
         dt = 0.001
     clip = filldrops.FillDrops(
         clip,
-        thresh=float(dt),
-        debug=True
+        thresh=float(dt)
     )
 
 
