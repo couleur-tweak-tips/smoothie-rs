@@ -50,3 +50,14 @@ jobs:
       with:
         name: smoothie-rs-bin-windows
         path: ./smoothie-rs/
+
+    - name: Generate release tag
+      id: tag
+      run: echo "::set-output name=release_tag::Nightly_$(date +"%Y.%m.%d_%H-%M")"
+
+    - uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.tag.outputs.release_tag }}
+        fail_on_unmatched_files: true
+        files: |
+          ./smoothie-rs-nightly.zip
