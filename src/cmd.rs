@@ -141,7 +141,7 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
         } else if args.peek.is_some() {
         } else {
             if args.stripaudio {
-                cur_cmd_arguments.append(&mut enc_args);
+                cur_cmd_arguments.append(&mut enc_args.clone());
             } else {
                 cur_cmd_arguments.append(&mut vec![
                     "-i".to_owned(),
@@ -152,7 +152,7 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
                     "1:a?".to_owned(),
                 ]);
             }
-            cur_cmd_arguments.append(&mut enc_args);
+            cur_cmd_arguments.append(&mut enc_args.clone());
             cur_cmd_arguments.push(payload.out_path.display().to_string());
 
             if recipe.get_bool("preview window", "enabled") {
