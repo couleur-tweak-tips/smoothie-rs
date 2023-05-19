@@ -1,5 +1,5 @@
 $ErrorActionPreference = "Stop"
-Get-Command curl, cargo -CommandType Application
+Get-Command 7z, curl, cargo -CommandType Application
 
 mkdir ./smoothie-rs/bin/
 
@@ -20,3 +20,5 @@ cp ./target/jamba.vpy ./smoothie-rs/
 cp ./target/*.ini ./smoothie-rs/
 
 set-content ./smoothie-rs/launch.cmd -value '@echo off & cd /D "%~dp0" & .\bin\smoothie-rs.exe --tui & pause'
+
+7z a smoothie-rs-nightly.zip ./smoothie-rs
