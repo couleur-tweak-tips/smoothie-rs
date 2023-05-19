@@ -12,7 +12,7 @@ def Tweak(clip, hue=None, sat=None, bright=None, cont=None, coring=True):
     if clip.format.color_family == vs.RGB:
         raise vs.Error("Tweak: videos using the RGB color model are not supported")
 
-    c = vs.get_core()
+    c = vs.core
         
     if (hue is not None or sat is not None) and clip.format.color_family != vs.GRAY:
         hue = 0.0 if hue is None else hue
