@@ -1,5 +1,4 @@
 """
-
 All weighting functions are of the following basic form:
     Args:
         frames: `int` | number of frames to generate weights for
@@ -10,18 +9,26 @@ Reference:
 """
 
 import math
-import warnings
+import warnings as w
 from numbers import Number
+from typing import Iterable
+
+_wizardry_enabled = False
 
 
-def normalize(weights: list):
+def enable_wizardry():
+    global _wizardry_enabled
+    _wizardry_enabled = True
+
+
+def normalize(weights: Iterable[Number]):
     """
-    Normalize a list of weights to sum to 1
+    Normalize a list of numbers to sum up to 1
     """
 
-    if min(weights) < 0:
-        absmin = abs(min(weights))
-        weights = [w + absmin + 1 for w in weights] # remove negative weights
+    if min(weights) < 0 and not _wizardry_enabled:
+        abs_min = abs(min(weights))
+        weights = [w + abs_min + 1 for w in weights] # remove negative weights
 
     tot = sum(weights)
     return [w / tot for w in weights]
@@ -37,30 +44,19 @@ def scale_range(n: int, start: Number, end: Number):
     if n <= 1: return [start] * n
     return [(x * (end - start) / (n - 1)) + start for x in range(n)]
 
-def vegas(input_fps: int, out_fps: int, blur_amt: int = 1) -> list[float]:
-    weights: list
-    n_weights = int(input_fps / out_fps * blur_amt)
-    if n_weights % 2 == 0:
-        weights = [1] + [2] * (n_weights - 1) + [1]
-    else:
-        weights = [1] * n_weights
-
-    return [1 / w for w in weights]
 
 def ascending(frames: int):
     """
     Linear ascending curve
     """
-    val = [x for x in range(1, frames + 1)]
-    return normalize(val)
+    return normalize(range(1, frames + 1))
 
 
 def descending(frames: int):
     """
     Linear descending curve
     """
-    val = [x for x in range(frames, 0, -1)]
-    return normalize(val)
+    return normalize(range(frames, 0, -1))
 
 
 def equal(frames: int):
@@ -70,12 +66,12 @@ def equal(frames: int):
     return [1 / frames] * frames
 
 
-def gaussian(frames: int, apex: Number = 2, std_dev: Number = 1, bound: tuple[float, float] = (0, 2)):
+def gaussian(frames: int, apex: Number = 2, std_dev: Number = 1, bound: tuple[Number, Number] = (0, 2)):
     """
     Args:
         bound: `[a, b]` | x axis vector from `a` to `b`
         apex: `μ`       | the position of the center of the peak, relative to x axis vector
-        std_dev: `σ`    | width of the "bell", higher == broader / flatter
+        std_dev: `σ`    | width of the "bell", higher == broader/flatter
     Reference:
         https://en.wikipedia.org/wiki/Gaussian_function
     """
@@ -90,14 +86,14 @@ def gaussian(frames: int, apex: Number = 2, std_dev: Number = 1, bound: tuple[fl
     return normalize(val)
 
 
-def gaussian_sym(frames: int, std_dev: Number = 1, bound: tuple[float, float] = (0, 2)):
+def gaussian_sym(frames: int, std_dev: Number = 1, bound: tuple[Number, Number] = (0, 2)):
     """
     Same as `gaussian()` but symmetric;
     the peak (apex) will always be at the center of the curve
     """
     _warn_bound(bound, "gaussian_sym")
 
-    max_abs = max(bound)
+    max_abs = max(map(abs, bound[:2]))
     r = scale_range(frames, -max_abs, max_abs)
 
     val = [1 / (math.sqrt(2 * math.pi) * std_dev)
@@ -124,11 +120,11 @@ def func_eval(func: str, nums: list[float]):
         - Everything in the `math` module
         - `x`: the current number (frame) in the sequence
         - `frames` (`len(nums)`): number of elements in the sequence (blended frames)
-        - The following built-in functions: `sum`, `abs`, `max`, `min`, `len`, `pow`, `range`, `round`
+        - The following built-in functions: `sum`, `abs`, `max`, `min`, `len`, `pow`, `map`, `range`, `round`
     """
 
     # math functions + math related builtins
-    namespace = {k:v for k, v in math.__dict__.items() if not k.startswith("_")}
+    namespace = {k: v for k, v in math.__dict__.items() if not k.startswith("_")}
     namespace |= {
         'frames': len(nums), # total number of items (frames)
         'x': None, # iterator for nums
@@ -139,6 +135,7 @@ def func_eval(func: str, nums: list[float]):
             'min': min,
             'len': len,
             'pow': pow,
+            'map': map,
             'range': range,
             'round': round
         }
@@ -147,11 +144,11 @@ def func_eval(func: str, nums: list[float]):
     return eval(f"[({func}) for x in {nums}]", namespace)
 
 
-def custom(frames: int, func: str = "", bound: tuple[float, float] = (0, 1)):
+def custom(frames: int, func: str = "", bound: tuple[Number, Number] = (0, 1)):
     """
     Arbitrary custom weighting function
     """
-    _warn_bound(bound, func)
+    _warn_bound(bound, "custom")
 
     r = scale_range(frames, bound[0], bound[1])
     val = func_eval(func, r)
@@ -172,9 +169,13 @@ def divide(frames: int, weights: list[float]):
     return normalize(val)
 
 
-def _warn_bound(bound: tuple, func: str):
+def _warn_bound(bound: tuple, func_name: str):
     if len(bound) < 2:
-        raise ValueError(f"{func}: bound must be a tuple of length 2, got {bound}")
+        raise ValueError(f"{func_name}: bound must be a sequence of length 2, got {bound}")
     elif len(bound) > 2:
-        warnings.warn(f"{func}: bound was given as a tuple of length {len(bound)}, only the first two values will be used",
+        w.warn(f"{func_name}: bound was given as a sequence of length {len(bound)}, "
+               f"only the first two values will be used (got {bound}))",
                RuntimeWarning)
+
+
+__all__ = [ascending, descending, equal, gaussian, gaussian_sym, pyramid, custom, divide, enable_wizardry]

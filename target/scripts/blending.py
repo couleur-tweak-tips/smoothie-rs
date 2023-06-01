@@ -1,18 +1,18 @@
-import vapoursynth as vs
-from vapoursynth import core
+import ast
+import logging
 import sys
 
 # you'll probably need to remove "from scripts" if you use that somewhere else
 from scripts import weighting
-from scripts import havsfunc
+from scripts.consts import NO, YES
 
-import logging
+import vapoursynth as vs
+from vapoursynth import core
+
 logging.basicConfig(level=logging.DEBUG)
-import ast
 
 
 # thanks to eoe
-
 def average(clip: vs.VideoNode, weights: list[float], divisor: float | None = None):
     def get_offset_clip(offset: int) -> vs.VideoNode:
         if offset > 0:
@@ -48,44 +48,17 @@ def average(clip: vs.VideoNode, weights: list[float], divisor: float | None = No
     return clip
 
 
-def _parse_weights(orig) -> tuple:
-    if not orig:
-        raise ValueError('no weights given')
+def vegas_weights(input_fps: int, out_fps: int, blur_amt: float = 1.0) -> list[float]:
 
-    if isinstance(orig, list):
-        return 'divide', {'weights': orig}
+    blend_factor = int(input_fps / out_fps * blur_amt)
+    n_weights = blend_factor + (1 - (blend_factor % 2)) # + 1 if even
 
+    if blend_factor % 2 == 0:
+        weights = [1] + [2] * (n_weights - 2) + [1] # - 2 for first and last
     else:
-        if orig[0] == '[' and orig[-1] == ']':
-            weights = [j.trim() for j in orig.stripr('[').stripl(']').split(',')]
+        weights = [1] * n_weights
 
-        orig = orig.replace(' ', '')
-        orig = orig.split('|')
-        func_name = orig[0]
-
-        if not hasattr(weighting, func_name):
-            raise ValueError(f'Invalid weighting function: "{func_name}"')
-
-        if len(orig) == 1:
-            return func_name, {}
-
-        else:
-            params = {}
-            for pair in orig[1].split(';'):
-                param, value = pair.split('=')
-                if param in ('std', 'std_dev', 'stddev'):
-                    param = 'std_dev'
-                # custom func is a string that literal_eval can't parse
-                if not (func_name == 'custom' and param == 'func'):
-                    try:
-                        value = literal_eval(value)
-                    except ValueError as v:
-                        raise ValueError(f'weighting: invalid value "{value}" '
-                                         f'for parameter "{param}"') from v
-
-                params[param] = value
-
-            return func_name, {**params}
+    return weighting.normalize(weights)
 
 
 def parse_literal(lit: str, opt: str):
@@ -98,28 +71,32 @@ def parse_literal(lit: str, opt: str):
 
 def parse_weights2(clip: vs.VideoNode, fbd: dict[str, str]) -> list[float]:
 
-    n_weights = round((clip.fps_num / clip.fps_den) / int(fbd['fps']) * float(fbd['intensity']))
+    input_fps = round(clip.fps_num / clip.fps_den)
+
+    n_weights = round(input_fps / int(fbd['fps']) * float(fbd['intensity']))
     orig = fbd['weighting']
 
-    if n_weights > 0:
-        if n_weights % 2 == 0:  # If number is not odd (requires odd number of frames)
-            n_weights += 1
+    if n_weights <= 1:
+        return [1.0]
+
+    if n_weights % 2 == 0:  # If number is not odd (requires odd number of frames)
+        n_weights += 1
 
     if not orig:
         raise ValueError('No weights given')
 
-    if orig == 'vegas':
-        return weighting.vegas(
-            input_fps=round(clip.fps_num / clip.fps_den),
-            out_fps=int(fbd['fps']),
-            blur_amt=float(fbd['intensity'])
-        )
-
     if orig[0] == '[' and orig[-1] == ']':
         return weighting.divide(n_weights, parse_literal(orig, 'weights'))
 
-    to_parse = orig.replace(' ', '').split('|', 1)  # only split once
+    to_parse = orig.replace(' ', '').split(';')
     func_name = to_parse.pop(0)
+
+    if func_name == 'vegas':
+        return vegas_weights(
+            input_fps=input_fps,
+            out_fps=int(fbd['fps']),
+            blur_amt=float(fbd['intensity'])
+        )
 
     if not hasattr(weighting, func_name):
         raise ValueError(f'Invalid weighting function: "{func_name}"')
@@ -131,10 +108,18 @@ def parse_weights2(clip: vs.VideoNode, fbd: dict[str, str]) -> list[float]:
 
     params = {'frames': n_weights}
 
-    for pair in to_parse[0].split(';'):
+    for pair in to_parse:
         param, value = pair.split('=')
+
+        if param == 'frames':
+            raise ValueError('Cannot set parameter "frames" manually')
+
+        if param == 'wizardry' and value in YES:
+            weighting.enable_wizardry()
+            continue
+
         # custom func is a string that literal_eval can't parse
-        if func_name != 'custom' and param != 'func':
+        if param != 'func':
             value = parse_literal(value, param)
 
         params[param] = value
@@ -157,34 +142,29 @@ def _test_weights():
     tests = (  # add more here
         '[0.1, 0.2, 0.3, 0.5]',
         '[1, 2, 3, 4, 5]',
-        'gaussian | apex = 3; std_dev = 2.2',
+        'gaussian; apex = 3; std_dev = 2.2',
         'gaussian_sym',
-        'custom | func = x**2'
+        'custom; func = x**2'
     )
 
     fps_vals = [60 * i for i in range(4, 12)]
 
-    for t in tests:
+    for fn in tests:
         fps = random.choice(fps_vals)
         ofps = random.choice([120, 60, 30])
         intensity = random.choice([1, 1.2, 1.3, 1.5, 1.8, 2, 3])
 
-        fbd = {'intensity': intensity, 'fps': ofps, 'weighting': t}
-        vals = parse_weights(vs.VideoNode(fps), fbd)
+        fbd = {'intensity': intensity, 'fps': ofps, 'weighting': fn}
+        node = core.std.BlankClip(fpsnum=fps, fpsden=1, length=1)
+        vals = parse_weights2(node, fbd)
 
-        print(f'{fps} -> {ofps} @ {intensity} using "{t}" =>', format_vec(vals), end='\n\n')
-
+        print(f'{fps} -> {ofps} @ {intensity} using "{fn}" =>', format_vec(vals), end='\n\n')
 
 def FrameBlend(clip: vs.VideoNode, fbd: dict, is_verbose: bool, weights: list[float]) -> vs.VideoNode:
 
-    # duplicated code I know... let me know a better way to bring them into scope.
     def verb(msg):
         if is_verbose:
-            print(logging.debug(f'VERB: {msg}'))
-
-    YES: list = ['on', 'True', 'true', 'yes', 'y', '1', 'yeah', 'yea', 'yep', 'sure', 'positive', True]
-    NO: list = ['off', 'False', 'false', 'no', 'n', 'nah', 'nope', 'negative', 'negatory', '0', 'null', '', ' ', '  ',
-                '\t', 'none', None, False]
+            logging.debug(f'VERB: {msg}')
 
     if fbd["bright blend"] not in NO:
         og_format = clip.format

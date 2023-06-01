@@ -16,9 +16,9 @@ if path_dirname not in sys.path:  # Sometimes isn't by default
 # in order of (optional) use
 from scripts import havsfunc
 from scripts import blending
-from scripts import weighting
 from scripts import adjust
 from scripts import filldrops
+from scripts.consts import YES, NO
 
 # import scripts  # Import every .py script modules from /plugins/
 
@@ -37,12 +37,6 @@ try:  # I have no clue why it returns a str the first time, that works though :s
 except json.decoder.JSONDecodeError:
     print(f"\n\nRecipe: {recipe}\n")
     raise Exception("Failed to parse the passed recipe as a JSON string")
-
-YES: list = ['on', 'True', 'true', 'yes', 'y', '1', 'yeah', 'yea', 'yep', 'sure', 'positive', True]
-NO: list = [
-    'off', 'False', 'false', 'no', 'n', 'nah', 'nope', 'negative', 'negatory',
-    '0', '0.0', 'null', '', ' ', '  ', '\t', 'none', None, False
-]
 
 
 def verb(*msg, **kwargs):
