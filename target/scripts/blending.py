@@ -1,6 +1,5 @@
 import ast
 import logging
-import sys
 
 # you'll probably need to remove "from scripts" if you use that somewhere else
 from scripts import weighting
@@ -85,9 +84,6 @@ def parse_weights2(clip: vs.VideoNode, fbd: dict[str, str]) -> list[float]:
     if not orig:
         raise ValueError('No weights given')
 
-    if orig[0] == '[' and orig[-1] == ']':
-        return weighting.divide(n_weights, parse_literal(orig, 'weights'))
-
     to_parse = orig.replace(' ', '').split(';')
     func_name = to_parse.pop(0)
 
@@ -98,15 +94,20 @@ def parse_weights2(clip: vs.VideoNode, fbd: dict[str, str]) -> list[float]:
             blur_amt=float(fbd['intensity'])
         )
 
-    if not hasattr(weighting, func_name):
-        raise ValueError(f'Invalid weighting function: "{func_name}"')
-
-    fn = getattr(weighting, func_name)
-
-    if not to_parse:  # no parameters given
-        return fn(frames=n_weights)
-
     params = {'frames': n_weights}
+
+    if func_name[0] == '[' and func_name[-1] == ']':
+        fn = weighting.divide
+        params['weights'] = parse_literal(func_name, 'weights')
+
+    else:
+        if not hasattr(weighting, func_name):
+            raise ValueError(f'Invalid weighting function: "{func_name}"')
+
+        fn = getattr(weighting, func_name)
+
+    if not to_parse:  # no extra parameters given
+        return fn(**params)
 
     for pair in to_parse:
         param, value = pair.split('=')
