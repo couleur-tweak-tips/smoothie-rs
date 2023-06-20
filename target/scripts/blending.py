@@ -1,5 +1,7 @@
 import ast
 import logging
+import sys
+import warnings
 
 # you'll probably need to remove "from scripts" if you use that somewhere else
 from scripts import weighting
@@ -64,7 +66,7 @@ def parse_literal(lit: str, opt: str):
     try:
         return ast.literal_eval(lit)
     except ValueError as v:
-        raise ValueError(f'weighting: invalid value "{lit}" '
+        raise ValueError(f'Invalid value "{lit}" '
                          f'for option "{opt}"') from v
 
 
@@ -84,7 +86,7 @@ def parse_weights2(clip: vs.VideoNode, fbd: dict[str, str]) -> list[float]:
     if not orig:
         raise ValueError('No weights given')
 
-    to_parse = orig.replace(' ', '').split(';')
+    to_parse = [x for x in orig.replace(' ', '').split(';') if x]
     func_name = to_parse.pop(0)
 
     if func_name == 'vegas':
@@ -110,10 +112,14 @@ def parse_weights2(clip: vs.VideoNode, fbd: dict[str, str]) -> list[float]:
         return fn(**params)
 
     for pair in to_parse:
+
+        if '=' not in pair:
+            raise ValueError(f'Options must be of the form "name=value", not "{pair}"')
+
         param, value = pair.split('=')
 
         if param == 'frames':
-            raise ValueError('Cannot set parameter "frames" manually')
+            raise ValueError('Cannot set option "frames" manually')
 
         if param == 'wizardry' and value in YES:
             weighting.enable_wizardry()
@@ -122,6 +128,9 @@ def parse_weights2(clip: vs.VideoNode, fbd: dict[str, str]) -> list[float]:
         # custom func is a string that literal_eval can't parse
         if param != 'func':
             value = parse_literal(value, param)
+
+        if params.get(param) is not None:
+            warnings.warn(f'Option "{param}" is set multiple times')
 
         params[param] = value
 
@@ -142,10 +151,12 @@ def _test_weights():
 
     tests = (  # add more here
         '[0.1, 0.2, 0.3, 0.5]',
+        '[1, 2, 3, 4, 5]; wizardry = yes',
         '[1, 2, 3, 4, 5]',
         'gaussian; apex = 3; std_dev = 2.2',
         'gaussian_sym',
-        'custom; func = x**2'
+        'custom; func = x**2',
+        'custom; func = x**2; bound = (0, 1)',
     )
 
     fps_vals = [60 * i for i in range(4, 12)]
@@ -159,7 +170,8 @@ def _test_weights():
         node = core.std.BlankClip(fpsnum=fps, fpsden=1, length=1)
         vals = parse_weights2(node, fbd)
 
-        print(f'{fps} -> {ofps} @ {intensity} using "{fn}" =>', format_vec(vals), end='\n\n')
+        print(f'{fps} -> {ofps} @ {intensity} using "{fn}" =>', format_vec(vals), end='\n\n', file=sys.stderr)
+
 
 def FrameBlend(clip: vs.VideoNode, fbd: dict, is_verbose: bool, weights: list[float]) -> vs.VideoNode:
 
