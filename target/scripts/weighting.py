@@ -41,11 +41,11 @@ def vegas(input_fps: int, out_fps: int, blur_amt: int = 1) -> list[float]:
     weights: list
     n_weights = int(input_fps / out_fps * blur_amt)
     if n_weights % 2 == 0:
-        weights = [1] + [2] * (n_weights - 1) + [1]
+        weights = [1] + [2] * (n_weights - 2) + [1] + [1]
     else:
         weights = [1] * n_weights
 
-    return [1 / w for w in weights]
+    return weights
 
 def ascending(frames: int):
     """
