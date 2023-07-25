@@ -136,6 +136,32 @@ pub fn resolve_outpath(
             ),
         );
     }
+
+    let variables = vec![
+        ("interpolation", "fps", "INTERP_FPS"),
+        ("interpolation", "speed", "SPEED"),
+        ("interpolation", "tuning", "TUNING"),
+        ("interpolation", "algorithm", "ALGORITHM"),
+        ("frame blending", "fps", "OUTPUT_FPS"),
+        ("frame blending", "intensity", "BLUR_AMOUNT"),
+        ("frame blending", "weighting", "WEIGHTING"),
+        ("flowblur", "intensity", "FLOWBLUR_AMOUNT"),
+        ("miscellaneous", "dedup threshold", "DEDUP"),
+        ("pre-interp", "factor", "FACTOR"),
+    ];
+    for (section, key, var) in variables {
+        if format.contains(&format!("%{}%", var)) {
+            let mut value = recipe.get(section, key);
+            value = value.chars().map(|c| match c {
+                '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*' => '_',
+                _ => c,
+            }).collect();
+            if value.trim().is_empty() {
+                continue;
+            }
+            format = format.replace(&format!("%{}%", var), &value);
+        }
+    }
     if format.contains("%FILENAME") {
         format = format.replace("%FILENAME%", &basename);
     } else {
