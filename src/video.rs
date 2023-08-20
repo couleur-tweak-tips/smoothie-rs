@@ -152,6 +152,9 @@ pub fn resolve_outpath(
     for (section, key, var) in variables {
         if format.contains(&format!("%{}%", var)) {
             let mut value = recipe.get(section, key);
+            if key == "weighting" && value.len() > 15 {
+                value = format!("{}..", &value[..15]);
+            }
             value = value.chars().map(|c| match c {
                 '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*' => '_',
                 _ => c,
