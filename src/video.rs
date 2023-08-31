@@ -136,7 +136,7 @@ pub fn resolve_outpath(
             ),
         );
     }
-
+    // create list of vars with section, key, and placeholder name
     let variables = vec![
         ("interpolation", "fps", "INTERP_FPS"),
         ("interpolation", "speed", "SPEED"),
@@ -149,19 +149,26 @@ pub fn resolve_outpath(
         ("miscellaneous", "dedup threshold", "DEDUP"),
         ("pre-interp", "factor", "FACTOR"),
     ];
+    // loop through each var
     for (section, key, var) in variables {
+        // check if file format string contains this var's placeholder
         if format.contains(&format!("%{}%", var)) {
+            // get var value from recipe using section and key
             let mut value = recipe.get(section, key);
+            // truncate weigting var if too long
             if key == "weighting" && value.len() > 15 {
                 value = format!("{}..", &value[..15]);
             }
+            // replace filename forbidden characters with underscores
             value = value.chars().map(|c| match c {
                 '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*' => '_',
                 _ => c,
             }).collect();
+            // skip this var if value is empty
             if value.trim().is_empty() {
                 continue;
             }
+            // replace placeholder with an actual value
             format = format.replace(&format!("%{}%", var), &value);
         }
     }
