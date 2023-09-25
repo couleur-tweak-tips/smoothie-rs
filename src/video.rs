@@ -88,18 +88,6 @@ pub fn resolve_outpath(
         return PathBuf::from(args.output.as_ref().expect("Failed unwrapping --output"));
     }
 
-    #[rustfmt::skip]
-    let fruits: Vec<&str> = [
-        "Apple",      "Apricot",     "Avocado",     "Banana",     "Blackberry",
-        "Blueberry",  "Cantaloupe",  "Cherry",      "Coconut",    "Cranberry",
-        "Cucumber",   "Durian",      "Date",        "Eggplant",   "Fig",
-        "Grape",      "Guava",       "Honeydew",    "Kiwi",       "Lemon",
-        "Lime",       "Lychee",      "Mango",       "Mirabelle",  "Olive",
-        "Orange",     "Papaya",      "Passion",     "Peach",      "Pear",
-        "Pineapple",  "Pitaya",      "Plum",        "Pomelo",     "Quince",
-        "Raspberry",  "Starfruit",   "Strawberry",  "Tomato",     "Watermelon",
-    ].to_vec();
-
     let mut format = if dont_format {
         "%FILENAME%-SM".to_string()
     } else {
@@ -125,17 +113,6 @@ pub fn resolve_outpath(
         in_dir
     };
 
-    if format.contains("%FRUITS%") || format.contains("%FRUIT") {
-        format = format.replace("%FRUIT%", "%FRUITS%").replace(
-            "%FRUITS%",
-            &format!(
-                " {}",
-                fruits
-                    .choose(&mut rand::thread_rng())
-                    .expect("Failed to select a random suffix")
-            ),
-        );
-    }
     if format.contains("%FILENAME") {
         format = format.replace("%FILENAME%", &basename);
     } else {
