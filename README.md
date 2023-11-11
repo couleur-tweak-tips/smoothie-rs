@@ -1,53 +1,27 @@
-> **Warning**
->
-> WIP, do not expect a working program 👍
-
 ## smoothie-rs
 
-Temporary repository for Smoothie's future form: developed in Rust 🦀.
-Thanks to yalter and anima for inspiration (though I'll try to copy as little code as possible).
+Rewrite of [Smoothie](https://github.com/couleur-tweak-tips/smoothie) in Rust, for now you can find more info and documentation about Smoothie in [the old python repo](https://github.com/couleur-tweak-tips/smoothie)
 
-### Roadmap
+Thanks to yalter and anima for inspiration
 
-- [X] Input processing/validation
-- [X] ``rc`` and `dir` "void" args
-- [X] --rerun (`last_args.txt`)
-- [X] Recipe parsing with defaults backup
-- [ ] Option to pass a .vpy script instead of the internal API calls used (Python runtime required)
-- [ ] Progress bar
-- [ ] Refactor VEGAS pre-renderer script & [suckless-cut](https://github.com/couleur-tweak-tips/suckless-cut) to support sm-rs' ``--json``
+## installation
 
+It's as simple as extracting the [latest nightly release zip](https://github.com/couleur-tweak-tips/smoothie-rs/releases/latest/download/smoothie-rs-nightly.zip) to a folder and running `launch.bat`
 
-Using rustsynth would slim Smoothie's bundle down to just:
+There is also a short YouTube tutorial with extra tips (Send To & Acquiring RIFE models):
 
-- 🗜 `smoothie-0.69.zip`
-    - 📂``Smoothie/``
-        - 📂``models/`` - RIFE models
-        - 📂``masks/`` - artifact masking for flowblur (and maybe interp soon too)
-        - 📝 ``recipe.ini``
-        - 📂``bin/`` - let me know a more fitting name since there are also text files in here
-            - 📚 ``defaults.ini`` - read-only version of the recipe, used as a fallback
-            - 🧋 ``Smoothie.exe`` - passes all arguments to sm and add `-cui`
-            - 💾 ``sm.exe`` - consider this to be the "core", would be the biggest file out of the two
-            - 🗒 ``last_args.txt`` - not really a binary but I prefer it tucked in bin
-            - ⚙ `VapourSynth.dll` - no idea if anything else is needed, haven't looked into last goal yet
-            - ⚙ `msvcp140.dll`, `vcruntime140.dll`, `vcruntime140_1.dll` - dependencies for Rust & VapourSynth
-            - 📝 `portable.vs` - tells VapourSynth it's a portable env, remove it for it to use global
-            - 📂``/vapoursynth64/plugins/``
-                - ⚙ ``libvslsmashsource.dll`` - to input videos
-                - ⚙ ``RemapFramesVapoursynth.dll`` - for `-padding`
-                - ⚙ ``RIFE.dll`` - for low fps interpolation, uses /models/
-                - ⚙ ``libmvtools.dll`` - flowblur
-                - ⚙ ``svpflow1_vs.dll`` & ``svpflow2_vs.dll`` - frame interpolation
-                - ⚙ ``akarin.dll`` - for lexpr
+[![thumbnail of smrs installation tutorial youtube video](https://img.youtube.com/vi/RfPDgoMuSWg/maxresdefault.jpg)](https://www.youtube.com/watch?v=RfPDgoMuSWg)
 
-Else in that ``/bin/`` folder there would be a whole portable Python environment
+<details><summary>about the now-removed README's roadmap</summary>
 
-## The future of this repository
+Me and [anima](https://github.com/animafps) once considered [developping Smoothie-RS in such a way that it directly made use of VapourSynth as a library via a Rust wrapper (and occasionally ditching Python completely)](https://github.com/couleur-tweak-tips/smoothie-rs/pull/24), but the only benefits I see are:
+* Slightly smaller package (50MB doesn't matter for much people nowadays)
+* Faster startup times because it wouldn't have to go through VSPipe
+* It could also allow more fancy ways to output (e.g render a VSNode once but pipe it to two processes at once?)
 
-The replacement process will go as follows:
+And the challenges would be:
+* Compiling would be much more complex since it'd be OS-based to link VapourSynth's library
+* All of the logic in the easy python code would need to be rewritten in Rust / C 
 
-1. new branch called "python-old" created in ctt/smoothie (for archiving the the previous version of smoothie)
-2. Remove all the Python code from ctt/smoothie
-3. Copy over all of the Rust code from ctt/smoothie-rs to ctt/smoothie
-4. Archive this repository and link ctt/smoothie in the readme
+I don't consider it worth working on nowadays
+</details>
