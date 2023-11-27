@@ -51,19 +51,20 @@ pub fn set_window_position(recipe: &Recipe) {
             }
         }
     };
-    dbg!(&borderless);
-    dbg!(&always_on_top);
-    dbg!(&pos);
-    dbg!(&width);
-    dbg!(&height);
+
+    // dbg!(&borderless);
+    // dbg!(&always_on_top);
+    // dbg!(&pos);
+    // dbg!(&width);
+    // dbg!(&height);
     unsafe {
-        dbg!(SetConsoleParams(
+        SetConsoleParams(
             borderless as c_int,
             always_on_top as c_int,
             pos,
             width,
             height,
-        ));
+        );
     }
 }
 
