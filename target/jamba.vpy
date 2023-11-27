@@ -64,7 +64,7 @@ if input_ext == '.avi':
 else:
 
 
-    eprint(f"cache_file: {cache_file}")
+    verb(f"cache_file: {cache_file}")
 
     clip: vs.VideoNode = core.ffms2.Source(
         source=input_video,
