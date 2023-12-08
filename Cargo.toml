@@ -16,6 +16,16 @@ which = "4.4.0" # Get-Command / where.exe / which alternative
 # rustsynth = "0.2.1" # wrapper for VapourSynth.dll
 #rustsynth = {git = "https://github.com/animafps/rustsynth"}
 
+[dependencies.windows]
+version = "0.52"
+features = [
+    "Data_Xml_Dom",
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_Threading",
+    "Win32_UI_WindowsAndMessaging",
+]
+
 # json stuff
 serde = "1.0.152" 
 serde_derive = "1.0.152"
