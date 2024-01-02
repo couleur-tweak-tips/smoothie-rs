@@ -292,7 +292,7 @@ def FlowBlur(
     if flb['amount'].lower() in NO:
         return clip
     verb(flb)
-    verb(f"Flowblurring @ {flb['intensity']} intensity")
+    verb(f"Flowblurring @ {flb['amount']} amount")
 
     # to be honest with you, I got no heckin idea how to configure this
     # mess with it and suggest what looks better 👍
