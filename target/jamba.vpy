@@ -7,6 +7,9 @@ from vapoursynth import core
 import os
 from os import path  # filepath handling
 import sys
+import platform
+
+user_os = platform.system()
 
 path_dirname = path.dirname(__file__).replace('\\\\?\\', '')  # .replace because windows
 
@@ -55,7 +58,11 @@ verb(f"CONTEXT: __file__: {__file__}")
 _, input_ext = path.splitext(input_video)
 
 base_file_name = path.basename(input_video)
-temp_folder = os.environ['TEMP']
+
+if user_os == "Linux":
+    temp_folder = "/tmp"
+else:
+    temp_folder = os.environ['TEMP']
 cache_file = path.join(temp_folder, f"{base_file_name}-ffms2_index")
 
 if input_ext == '.avi':
