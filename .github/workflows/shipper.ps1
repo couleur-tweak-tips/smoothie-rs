@@ -19,6 +19,29 @@ cp ./target/scripts/* ./smoothie-rs/bin/scripts/
 cp ./target/jamba.vpy ./smoothie-rs/
 cp ./target/*.ini ./smoothie-rs/
 
-set-content ./smoothie-rs/launch.cmd -value '@echo off & cd /D "%~dp0" & .\bin\smoothie-rs.exe --tui & pause'
+set-content ./smoothie-rs/launch.cmd -value @'
+@echo off
+title smoothie-rs
+cd /D "%~dp0"
+.\bin\smoothie-rs.exe --tui
+timeout 1 > nul
+'@
+
+set-content ./smoothie-rs/makeShortcuts.cmd -value @'
+@echo off
+title make smoothie-rs shortcuts
+:: https://github.com/couleur-tweak-tips/TweakList/blob/master/modules/Installers/Invoke-SmoothieRsPost.ps1
+PowerShell "iex(irm tl.ctt.cx); Invoke-SmoothieRsPost -DIR \"%~dp0\""
+echo Shortcuts done
+echo.
+set /p choice="Add smoothie-rs to PATH? (convenient use from command line) [Y/N]: "
+if /i "%choice%"=="Y" (
+    setx PATH "%PATH%;%~dp0bin"
+	echo Done, do not forget to adjust it if you move smoothie's folder in the future
+    echo.
+)
+echo Feel free to delete or hide this batchfile
+timeout 2 > nul
+'@
 
 7z a smoothie-rs-nightly.zip ./smoothie-rs
