@@ -1,17 +1,18 @@
 # vi: ft=python
-# I try to respect PEP 8 where I can, please do as well 👍
 
 import vapoursynth as vs
 from vapoursynth import core
 
-import os
-from os import path  # filepath handling
+from os import path
 import sys
-import tempfile
+from tempfile import gettempdir # ffms2 index
+from math import floor # toframes()
+import json # loading recipe
+import re # get_sec()
 
-path_dirname = path.dirname(__file__).replace('\\\\?\\', '')  # .replace because windows
+path_dirname = path.dirname(__file__).replace('\\\\?\\', '')
 
-if path_dirname not in sys.path:  # Sometimes isn't by default
+if path_dirname not in sys.path:
     sys.path.append(path_dirname)
 
 # in order of (optional) use
@@ -20,10 +21,6 @@ from scripts import blending
 from scripts import adjust
 from scripts import filldrops
 from scripts.consts import YES, NO
-
-# import scripts  # Import every .py script modules from /plugins/
-
-import json  # for .loads
 
 for var in ['input_video', 'recipe']:
     if var not in vars():
@@ -51,21 +48,16 @@ def eprint(*msg, **kwargs):
 
 verb(f"CONTEXT: Using vapoursynth bindings from {vs.__file__}")
 verb(f"CONTEXT: __file__: {__file__}")
-# verb(rc)
 
 _, input_ext = path.splitext(input_video)
 
-base_file_name = path.basename(input_video)
-
-
-temp_folder = tempfile.gettempdir()
-cache_file = path.join(temp_folder, f"{base_file_name}-ffms2_index")
+temp_folder = gettempdir()
+cache_file = path.join(temp_folder, path.basename(input_video) + "-ffms2_index")
 
 if input_ext == '.avi':
 
     clip: vs.VideoNode = core.avisource.AVISource(input_video)
 else:
-
 
     verb(f"cache_file: {cache_file}")
 
@@ -95,13 +87,64 @@ else:
     #)
 # source plugin
 
-# haven't bothered adding an arg to this 😴
-# this is for nerdy-ahhh comparisons
-cap_fps = 0
-if cap_fps != 0:
-    eprint(f"CAPPING FRAME-RATE TO {cap_fps}")
-    clip = havsfunc.ChangeFPS(clip, cap_fps, 1)
+# this is for fps comparisons
+if rc.get('runtime').get('fpscap'):
 
+    fpscap = rc.get('runtime').get('fpscap')
+    eprint(f"CAPPING FRAME-RATE TO {fpscap}")
+    clip = havsfunc.ChangeFPS(clip, int(fpscap), 1)
+
+if (rt := rc.get('runtime')).get('timecodes'):
+    def get_sec(timecode):
+        spare = 0
+        if type(timecode) is str:
+            if '.' in timecode:
+                spare = float("0." + timecode.split('.')[1])
+                timecode = timecode.split('.')[0]
+            if ';' in timecode:
+                timecode = timecode.replace(';','.')
+        elif isinstance(timecode, (float, int)):
+            return timecode
+        if type(timecode) is list: timecode = timecode[0]
+        if type(timecode) is str:
+            if re.search('[a-zA-Z]', timecode) is not None:
+                raise Exception(f'Timecode to trim contains a letter: {timecode}')
+        # god bless https://stackoverflow.com/a/6402934
+        return sum(int(x) * 60 ** i for i, x in enumerate(reversed(str(timecode).split(':')))) + spare
+
+    fps = float(clip.fps) # It is of "fraction type" per default
+    def toframes(timecode):
+        return floor(get_sec(timecode)*fps)
+
+    Mappings: str = ""
+
+    for index in range(len(tc := rt['timecodes'].split(';'))):
+
+        start, end = tc[index].split('-')
+
+        if end == 'EOF':
+            end = round(clip.num_frames / fps, 2)
+
+        s, e = toframes(start), toframes(end)
+
+        verb(f"Index #{index}: from {start} (f.{s}) to {end} (f.{e})")
+        match rt['cut type']:
+            case "trim":
+                if index == 0:
+                    toadd = clip[s:e]
+                else:
+                    if e == 'EOF':
+                        toadd += clip[s:]
+                    else:
+                        toadd += clip[s:e]
+            case "padding":
+                Mappings += f"[{max(s-1, 0)} {min(e, clip.num_frames)-1}] "
+
+    if rt['cut type'] == "trim":
+        clip = toadd
+    else:
+        blackClip = core.std.BlankClip(clip, length=clip.num_frames)
+        clip = core.remap.ReplaceFramesSimple(blackClip, clip, mappings=Mappings.rstrip(' '))
 
 def resolve_mask_path(folder_path: str, file_name: str):
 
