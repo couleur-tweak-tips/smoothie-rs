@@ -88,13 +88,13 @@ else:
 # source plugin
 
 # this is for fps comparisons
-if rc.get('runtime').get('fpscap'):
+if rc.get('runtime') and rc.get('runtime').get('fpscap'):
 
     fpscap = rc.get('runtime').get('fpscap')
     eprint(f"CAPPING FRAME-RATE TO {fpscap}")
     clip = havsfunc.ChangeFPS(clip, int(fpscap), 1)
 
-if (rt := rc.get('runtime')).get('timecodes'):
+if rc.get('runtime') and (rt := rc.get('runtime')).get('timecodes'):
     def get_sec(timecode):
         spare = 0
         if type(timecode) is str:
