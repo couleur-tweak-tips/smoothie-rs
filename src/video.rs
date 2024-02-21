@@ -160,10 +160,13 @@ pub fn resolve_outpath(
                 value = format!("{}..", &value[..15]);
             }
             // replace filename forbidden characters with underscores
-            value = value.chars().map(|c| match c {
-                '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*' => '_',
-                _ => c,
-            }).collect();
+            value = value
+                .chars()
+                .map(|c| match c {
+                    '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*' => '_',
+                    _ => c,
+                })
+                .collect();
             // skip this var if value is empty
             if value.trim().is_empty() {
                 continue;
@@ -209,7 +212,7 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
     let mut videos: Vec<(PathBuf, FfProbe, Option<Vec<Timecodes>>)> = vec![];
 
     if which("ffmpeg").is_err() {
-        let term = if cfg!(target_os = "windows"){
+        let term = if cfg!(target_os = "windows") {
             "ffmpeg.exe"
         } else {
             "ffmpeg"
@@ -217,7 +220,7 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
         panic!("{term} is not installed/in PATH, ensure FFmpeg is installed.");
     }
     if which("ffprobe").is_err() {
-        let term = if cfg!(target_os = "windows"){
+        let term = if cfg!(target_os = "windows") {
             "ffprobe.exe"
         } else {
             "ffprobe"
@@ -225,7 +228,7 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
         panic!("{term} is not installed/in PATH, ensure FFmpeg is installed.");
     }
     if recipe.get_bool("preview window", "enabled") && which("ffplay").is_err() {
-        let term = if cfg!(target_os = "windows"){
+        let term = if cfg!(target_os = "windows") {
             "ffplay.exe"
         } else {
             "ffplay"

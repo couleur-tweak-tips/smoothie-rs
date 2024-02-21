@@ -6,7 +6,7 @@ use crate::cmd::SmCommand;
 use regex::Regex;
 use std::process::{ChildStderr, Command, Stdio};
 
-use crate::{verb};
+use crate::verb;
 use std::env;
 
 //use crate::ffpb::ffmpeg;
@@ -147,42 +147,41 @@ pub fn _vpipe_render2(commands: Vec<SmCommand>) {
             );
         }
 
-            let mut vs = Command::new(cmd.vs_path)
-                .args(cmd.vs_args)
-                .stdout(Stdio::piped())
+        let mut vs = Command::new(cmd.vs_path)
+            .args(cmd.vs_args)
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("Failed in spawning FFmpeg child");
+
+        let pipe = vs.stdout.take().expect("Failed piping out of VSPipe");
+
+        let mut ffmpeg = Command::new(cmd.ff_path)
+            .args(cmd.ff_args)
+            .stdin(pipe)
+            .stdout(if previewing {
+                Stdio::piped()
+            } else {
+                Stdio::inherit()
+            })
+            .spawn()
+            .expect("Failed in spawning FFmpeg child");
+
+        if previewing {
+            let ffplay_pipe = ffmpeg.stdout.take().expect("Failed piping out of FFmpeg");
+            let ffplay = Command::new(cmd.ffplay_path.unwrap())
+                .args(cmd.ffplay_args.unwrap())
+                .stdin(ffplay_pipe)
                 .spawn()
-                .expect("Failed in spawning FFmpeg child");
+                .expect("Failed in spawning ffplay child");
+            ffplay.wait_with_output().unwrap();
+        }
 
-            let pipe = vs.stdout.take().expect("Failed piping out of VSPipe");
-
-            let mut ffmpeg = Command::new(cmd.ff_path)
-                .args(cmd.ff_args)
-                .stdin(pipe)
-                .stdout(if previewing {
-                    Stdio::piped()
-                } else {
-                    Stdio::inherit()
-                })
-                .spawn()
-                .expect("Failed in spawning FFmpeg child");
-
-            if previewing {
-                let ffplay_pipe = ffmpeg.stdout.take().expect("Failed piping out of FFmpeg");
-                let ffplay = Command::new(cmd.ffplay_path.unwrap())
-                    .args(cmd.ffplay_args.unwrap())
-                    .stdin(ffplay_pipe)
-                    .spawn()
-                    .expect("Failed in spawning ffplay child");
-                ffplay.wait_with_output().unwrap();
-            }
-
-            vs.wait_with_output().unwrap();
-            ffmpeg.wait_with_output().unwrap();
-
+        vs.wait_with_output().unwrap();
+        ffmpeg.wait_with_output().unwrap();
     }
 }
 
-fn _old_ffpb(cmd: SmCommand, previewing: bool){
+fn _old_ffpb(cmd: SmCommand, previewing: bool) {
     let mut vs = Command::new(cmd.vs_path)
         .args(cmd.vs_args)
         .stdout(Stdio::piped())
