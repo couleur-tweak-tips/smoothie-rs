@@ -52,7 +52,7 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
         );
     }
 
-    let mut enc_args: Vec<String> = parse_encoding_args(&args, &recipe)
+    let enc_args: Vec<String> = parse_encoding_args(&args, &recipe)
         .split(" ")
         .map(String::from)
         .filter(|s| !s.is_empty())
