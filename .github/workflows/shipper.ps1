@@ -41,7 +41,7 @@ if /i "%choice%"=="Y" (
     echo.
 )
 echo Feel free to delete or hide this batchfile
-timeout 2 > nul
+timeout 5 > nul
 '@
 
 7z a smoothie-rs-nightly.zip ./smoothie-rs
