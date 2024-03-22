@@ -133,12 +133,10 @@ def parse_weights2(clip: vs.VideoNode, fbd: dict[str, str]) -> list[float]:
 
 
 def format_vec(v: list[float]):
-    rounded = [round(x, 3) for x in v]
-
-    if len(rounded) <= 3:
-        return str(rounded)
-
-    return str(rounded[0:2])[:-1] + ', ..., ' + str(rounded[-3:-1])[1:]
+    rounded = [f'{x:.2f}' for x in v]
+    if len(rounded) > 4:
+        rounded = rounded[:2] + ['...'] + rounded[-2:]
+    return f"[{', '.join(rounded)}]"
 
 
 def _test_weights():
