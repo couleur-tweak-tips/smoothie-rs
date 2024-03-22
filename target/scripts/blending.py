@@ -112,7 +112,6 @@ def parse_weights2(clip: vs.VideoNode, fbd: dict[str, str]) -> list[float]:
         return fn(**params)
 
     for pair in to_parse:
-
         if '=' not in pair:
             raise ValueError(f'Options must be of the form "name=value", not "{pair}"')
 
@@ -125,14 +124,10 @@ def parse_weights2(clip: vs.VideoNode, fbd: dict[str, str]) -> list[float]:
             weighting.enable_wizardry()
             continue
 
-        # custom func is a string that literal_eval can't parse
-        if param != 'func':
-            value = parse_literal(value, param)
-
         if params.get(param) is not None:
             warnings.warn(f'Option "{param}" is set multiple times')
 
-        params[param] = value
+        params[param] = parse_literal(value, param)
 
     return fn(**params)
 
@@ -155,8 +150,6 @@ def _test_weights():
         '[1, 2, 3, 4, 5]',
         'gaussian; apex = 3; std_dev = 2.2',
         'gaussian_sym',
-        'custom; func = x**2',
-        'custom; func = x**2; bound = (0, 1)',
     )
 
     fps_vals = [60 * i for i in range(4, 12)]
