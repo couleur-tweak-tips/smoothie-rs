@@ -270,8 +270,8 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
         sc=False  # scene change
     )
 
-    verb('Masking pre-interp')
     if pi['masking'] in YES:
+        verb('Masking pre-interp')
         clip = Masking(
             to_mask=clip,
             original_clip=og_clip
