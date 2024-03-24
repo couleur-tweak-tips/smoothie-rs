@@ -187,7 +187,7 @@ Adjusted InterFrame from havsfunc,support 10bit with new svp
 Source: https://github.com/xyx98/my-vapoursynth-script/blob/master/xvs.py
 """
 def InterFrame(Input, Preset='Medium', Tuning='Film', NewNum=None, NewDen=1, GPU=True, gpuid=0, OverrideAlgo=None, OverrideArea=None,
-               FrameDouble=False):
+               FrameDouble=False, OverrideBlockSize='auto'):
 
     if not isinstance(Input, vs.VideoNode):
         raise TypeError('InterFrame: This is not a video')
@@ -218,12 +218,21 @@ def InterFrame(Input, Preset='Medium', Tuning='Film', NewNum=None, NewDen=1, GPU
         SuperString += 'gpu:1}' if GPU else 'gpu:0}'
         
         # Create VectorsString
-        if Tuning == 'animation' or Preset == 'fastest':
-            VectorsString = '{block:{w:32,'
-        elif Preset in ['fast', 'faster'] or not GPU:
-            VectorsString = '{block:{w:16,'
+        if OverrideBlockSize not in [None, '', 'auto']:
+            if 'x' in OverrideBlockSize: # contains a width, and height
+                width, height = OverrideBlockSize.split('x')
+                VectorsString = '{block:{w:' + width + ','
+                if height != '':
+                    VectorsString += 'h:' + height + ','
+            else: # only contains width
+                VectorsString = '{block:{w:' + OverrideBlockSize + ','
         else:
-            VectorsString = '{block:{w:8,'
+            if Tuning == 'animation' or Preset == 'fastest':
+                VectorsString = '{block:{w:32,'
+            elif Preset in ['fast', 'faster'] or not GPU:
+                VectorsString = '{block:{w:16,'
+            else:
+                VectorsString = '{block:{w:8,'
         
         if Tuning == 'animation' or Preset == 'fastest':
             VectorsString += 'overlap:0'
@@ -281,7 +290,7 @@ def InterFrame(Input, Preset='Medium', Tuning='Film', NewNum=None, NewDen=1, GPU
         if Tuning == 'weak':
             SmoothString += ',area_sharp:1.2},scene:{blend:true,mode:0,limits:{blocks:50}}}'
         else:
-            SmoothString += ',area_sharp:1.2},scene:{blend:true,mode:0}}'
+            SmoothString += ',area_sharp:1.2},scene:{blend:false,mode:0}}'
         
         # Make interpolation vector clip
         Super = core.svp1.Super(clip, SuperString)

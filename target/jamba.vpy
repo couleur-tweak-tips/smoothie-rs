@@ -308,6 +308,7 @@ if (ip := rc['interpolation'])['enabled'].lower() in YES:
         NewNum=float(ip['fps']),
         NewDen=1,
         OverrideAlgo=int(ip['algorithm']),
+        OverrideBlockSize=ip['block size'],
         OverrideArea=area
     )
 
