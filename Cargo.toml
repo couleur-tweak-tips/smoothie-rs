@@ -14,6 +14,15 @@ rand = "0.8.5"  # randomly choose from fruits for suffix
 rfd = "0.11.0"  # open file dialog
 which = "4.4.0" # Get-Command / where.exe / which alternative
 
+[dependencies.windows-sys]
+version = "0.52"
+features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_Threading",
+    "Win32_UI_WindowsAndMessaging",
+]
+
 # json stuff
 serde = "1.0.152" 
 serde_derive = "1.0.152"
