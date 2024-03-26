@@ -52,7 +52,7 @@ verb(f"CONTEXT: __file__: {__file__}")
 _, input_ext = path.splitext(input_video)
 
 temp_folder = gettempdir()
-cache_file = path.join(temp_folder, path.basename(input_video) + "-ffms2_index")
+cache_file = path.join(temp_folder, path.basename(input_video) + str(path.getsize(input_video)) + "-ffms2_index")
 
 if input_ext == '.avi':
 
