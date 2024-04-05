@@ -128,17 +128,18 @@ if rc.get('runtime') and (rt := rc.get('runtime')).get('timecodes'):
         s, e = toframes(start), toframes(end)
 
         verb(f"Index #{index}: from {start} (f.{s}) to {end} (f.{e})")
-        match rt['cut type']:
-            case "trim":
-                if index == 0:
-                    toadd = clip[s:e]
+        if rt['cut type'] == "trim":
+            if index == 0:
+                toadd = clip[s:e]
+            else:
+                if e == 'EOF':
+                    toadd += clip[s:]
                 else:
-                    if e == 'EOF':
-                        toadd += clip[s:]
-                    else:
-                        toadd += clip[s:e]
-            case "padding":
-                Mappings += f"[{max(s-1, 0)} {min(e, clip.num_frames)-1}] "
+                    toadd += clip[s:e]
+        elif rt['cut type'] == "padding":
+            Mappings += f"[{max(s-1, 0)} {min(e, clip.num_frames)-1}] "
+        else:
+            raise ValueError(f"Unknown cut type provided '{rt['cut type']}'")
 
     if rt['cut type'] == "trim":
         clip = toadd
@@ -332,7 +333,7 @@ if (out := float(rc['timescale']['out'])) != 1:  # Output timescale, done after 
 def FlowBlur(
         clip: vs.VideoNode,
         flb: dict
-) -> vs.VideoNode | None:
+) -> vs.VideoNode:
     if flb['masking'].lower() not in NO:
         original = clip  # makes a "backup"
 

@@ -2,6 +2,7 @@ import ast
 import logging
 import sys
 import warnings
+from typing import List, Dict
 
 # you'll probably need to remove "from scripts" if you use that somewhere else
 from scripts import weighting
@@ -14,7 +15,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 # thanks to eoe
-def average(clip: vs.VideoNode, weights: list[float], divisor: float | None = None):
+def average(clip: vs.VideoNode, weights: List[float], divisor: float = None):
     def get_offset_clip(offset: int) -> vs.VideoNode:
         if offset > 0:
             return clip[0] * offset + clip[:-offset]
@@ -49,7 +50,7 @@ def average(clip: vs.VideoNode, weights: list[float], divisor: float | None = No
     return clip
 
 
-def vegas_weights(input_fps: int, out_fps: int, blur_amt: float = 1.0) -> list[float]:
+def vegas_weights(input_fps: int, out_fps: int, blur_amt: float = 1.0) -> List[float]:
 
     blend_factor = int(input_fps / out_fps * blur_amt)
     n_weights = blend_factor + (1 - (blend_factor % 2)) # + 1 if even
@@ -70,7 +71,7 @@ def parse_literal(lit: str, opt: str):
                          f'for option "{opt}"') from v
 
 
-def parse_weights2(clip: vs.VideoNode, fbd: dict[str, str]) -> list[float]:
+def parse_weights2(clip: vs.VideoNode, fbd: Dict[str, str]) -> List[float]:
 
     input_fps = round(clip.fps_num / clip.fps_den)
 
@@ -132,7 +133,7 @@ def parse_weights2(clip: vs.VideoNode, fbd: dict[str, str]) -> list[float]:
     return fn(**params)
 
 
-def format_vec(v: list[float]):
+def format_vec(v: List[float]):
     rounded = [f'{x:.2f}' for x in v]
     if len(rounded) > 4:
         rounded = rounded[:2] + ['...'] + rounded[-2:]
@@ -164,7 +165,7 @@ def _test_weights():
         print(f'{fps} -> {ofps} @ {intensity} using "{fn}" =>', format_vec(vals), end='\n\n', file=sys.stderr)
 
 
-def FrameBlend(clip: vs.VideoNode, fbd: dict, is_verbose: bool, weights: list[float]) -> vs.VideoNode:
+def FrameBlend(clip: vs.VideoNode, fbd: dict, is_verbose: bool, weights: List[float]) -> vs.VideoNode:
 
     def verb(msg):
         if is_verbose:

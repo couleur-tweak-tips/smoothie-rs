@@ -11,7 +11,7 @@ Reference:
 import math
 import warnings
 from numbers import Number
-from typing import Iterable
+from typing import Iterable, List, Tuple
 
 
 __all__ = ["ascending", "descending", "equal", "gaussian", "gaussian_sym", "pyramid", "divide", "enable_wizardry"]
@@ -69,7 +69,7 @@ def equal(frames: int):
     return [1 / frames] * frames
 
 
-def gaussian(frames: int, mean: Number = 2, std_dev: Number = 1, bound: tuple[Number, Number] = (0, 2)):
+def gaussian(frames: int, mean: Number = 2, std_dev: Number = 1, bound: Tuple[Number, Number] = (0, 2)):
     """
     Args:
         bound: `[a, b]` | range for the x-axis, from `a` to `b` (inclusive)
@@ -88,7 +88,7 @@ def gaussian(frames: int, mean: Number = 2, std_dev: Number = 1, bound: tuple[Nu
     return normalize(val)
 
 
-def gaussian_sym(frames: int, std_dev: Number = 1, bound: tuple[Number, Number] = (0, 2)):
+def gaussian_sym(frames: int, std_dev: Number = 1, bound: Tuple[Number, Number] = (0, 2)):
     """
     Same as `gaussian()` but symmetric;
     the peak (mean) will always be at the center of the curve
@@ -109,7 +109,7 @@ def pyramid(frames: int):
     return normalize(val)
 
 
-def divide(frames: int, weights: list[float]):
+def divide(frames: int, weights: List[float]):
     """
     Stretch the given array (weights) to a specific length (frames)
     Example: `frames = 10; weights = [1, 2]`
