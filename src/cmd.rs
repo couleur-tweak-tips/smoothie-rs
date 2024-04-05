@@ -67,7 +67,10 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
     };
     let bin_dir_vspipe = cur_exe_dir.join(vs_bin);
     let vspipe_in_path = which("vspipe");
-    let vs_path = (if bin_dir_vspipe.exists() {
+    let vs_path = (
+        if args.vspipe_path.is_some(){
+        args.vspipe_path.unwrap()}
+    else if bin_dir_vspipe.exists() {
         verb!("Using vspipe that's in same directory as binary");
         bin_dir_vspipe
     } else if vspipe_in_path.is_ok() {

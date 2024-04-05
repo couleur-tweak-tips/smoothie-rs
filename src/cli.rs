@@ -38,6 +38,10 @@ pub struct Arguments {
     #[clap(long, default_value = "jamba.vpy")]
     pub vpy: PathBuf,
 
+    /// Pass a VSPipe executable to run scripts from
+    #[clap(long)]
+    pub vspipe_path: Option<PathBuf>,
+
     // misc io
     /// Discard any audio tracks that'd pass to output
     #[clap(long, visible_alias = "an", default_value_t = false)]
