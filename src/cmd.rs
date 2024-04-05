@@ -93,7 +93,15 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
         );
     };
 
-    let rc_string = serde_json::to_string(&recipe).expect("Failed serializing recipe to JSON");
+    /*
+        scuffed, but works
+
+        https://github.com/indexmap-rs/indexmap/issues/325
+
+        old one : let rc_string = serde_json::to_string(&recipe).expect("Failed serializing recipe to JSON");
+    */
+    let rc_string = (format!("{:?}", &recipe)).replace("Recipe { data: {", "{ \"data\": {");
+
 
     let vs_args = vec![
         // "--progress".to_owned(),

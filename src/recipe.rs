@@ -1,7 +1,7 @@
 use crate::cli::Arguments;
 use crate::verb;
-use std::collections::hash_map::Keys;
-use std::collections::HashMap;
+use indexmap::map::Keys;
+use indexmap::map::IndexMap;
 use std::env;
 use std::fs::File;
 use std::io::Read;
@@ -9,13 +9,14 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Recipe {
-    pub data: HashMap<String, HashMap<String, String>>,
+    #[serde(with = "indexmap::map::serde_seq")]
+    pub data: IndexMap<String, IndexMap<String, String>>,
 }
 
 impl Recipe {
     pub fn new() -> Recipe {
         Recipe {
-            data: HashMap::new(),
+            data: IndexMap::new(),
         }
     }
 
@@ -23,17 +24,17 @@ impl Recipe {
         self.data.contains_key(key)
     }
 
-    pub fn keys(&mut self) -> Keys<'_, String, HashMap<String, String>> {
+    pub fn keys(&mut self) -> Keys<'_, String, IndexMap<String, String>> {
         self.data.keys()
     }
 
-    pub fn insert_section(&mut self, section: String, data: HashMap<String, String>) {
+    pub fn insert_section(&mut self, section: String, data: IndexMap<String, String>) {
         self.data.insert(section, data);
     }
     // that lil boilerplate worth the error handling
     pub fn insert_value(&mut self, section: &str, key: String, value: String) {
         if !self.data.contains_key(section) {
-            self.data.insert(section.parse().unwrap(), HashMap::new());
+            self.data.insert(section.parse().unwrap(), IndexMap::new());
         }
 
         match self.data.get_mut(section) {
@@ -73,7 +74,7 @@ impl Recipe {
         }
     }
 
-    pub fn get_section(&self, section: &str) -> &HashMap<String, String> {
+    pub fn get_section(&self, section: &str) -> &IndexMap<String, String> {
         match self.data.get(section) {
             Some(section) => section,
             None => panic!("Recipe section not found: `{section}`"),
@@ -133,7 +134,7 @@ pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
                     .to_string();
 
                 if !rc.contains_key(&cur_category) {
-                    rc.insert_section(cur_category.clone(), HashMap::new());
+                    rc.insert_section(cur_category.clone(), IndexMap::new());
                 }
             }
 
