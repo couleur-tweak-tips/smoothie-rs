@@ -159,6 +159,8 @@ Arguments passed:
 
 Note: If your PC is still going BRRR the video might still be rendering :)
 
+Common troubleshooting errors are listed at ctt.cx/video/smoothie/troubleshooting
+
 If you'd like help, take a screenshot of this message and your recipe and come over to discord.gg/CTT and make a post in #support
                     "#))
                 .set_level(rfd::MessageLevel::Error)
@@ -200,8 +202,36 @@ If you'd like help, take a screenshot of this message and your recipe and come o
 
             let ini_path = presets_path.canonicalize().unwrap().display().to_string();
 
-            open_file::open(ini_path, None);
-            std::process::exit(0);
+            match opener::open(&ini_path){
+                Ok(()) =>{
+                    std::process::exit(0);
+                }
+                Err(e) => {
+                    panic!("Error {e}\n\nFailed opening file {:?}", ini_path);
+                }
+            }
+        }
+        "def" | "default" | "defaults" => {
+            let presets_path = current_exe_path.join("..").join("defaults.ini");
+
+            if !presets_path.exists() {
+                panic!(
+                    "Could not find defaults.ini (expected at {})",
+                    presets_path.display()
+                )
+            }
+
+            let ini_path = presets_path.canonicalize().unwrap().display().to_string();
+
+            
+            match opener::open(&ini_path){
+                Ok(()) =>{
+                    std::process::exit(0);
+                }
+                Err(e) => {
+                    panic!("Error {e}\n\nFailed opening file {:?}", ini_path);
+                }
+            }
         }
         "rc" | "recipe" | "conf" | "config" => {
             let ini_path = current_exe_path.join("..").join("recipe.ini");
@@ -212,8 +242,14 @@ If you'd like help, take a screenshot of this message and your recipe and come o
 
             let ini_path = ini_path.canonicalize().unwrap().display().to_string();
 
-            open_file::open(ini_path, None);
-            std::process::exit(0);
+            match opener::open(&ini_path){
+                Ok(()) =>{
+                    std::process::exit(0);
+                }
+                Err(e) => {
+                    panic!("Error {e}\n\nFailed opening file {:?}", ini_path);
+                }
+            }   
         }
         "root" | "dir" | "folder" => {
             if cfg!(target_os = "windows") {
