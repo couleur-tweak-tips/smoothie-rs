@@ -12,7 +12,6 @@ extern crate anyhow;
 extern crate num_rational;
 
 // progress bar, used in ffpb.rs
-extern crate kdam;
 extern crate regex;
 
 mod cli;
