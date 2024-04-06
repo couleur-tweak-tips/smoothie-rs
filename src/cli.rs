@@ -5,7 +5,7 @@ use std::{env, path::PathBuf, process::Command};
 
 /// Smoothen up your gameplay footage with Smoothie, yum!
 #[derive(Parser, Debug)]
-#[clap(about, long_about = "", arg_required_else_help = true)]
+#[clap(about, long_about = "", arg_required_else_help = false)]
 pub struct Arguments {
     // io
     /// Input video file paths, quoted and separated by strings

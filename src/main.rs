@@ -11,10 +11,9 @@ extern crate ffprobe; // cli wrapper
 extern crate anyhow;
 extern crate num_rational;
 
-// progress bar, used in ffpb.rs
-extern crate kdam;
 extern crate regex;
 
+mod gui;
 mod cli;
 mod cmd;
 // mod ffpb;
@@ -26,7 +25,7 @@ mod utils;
 //mod vapoursynth;
 mod video;
 
-use crate::{cli::Arguments, cmd::SmCommand, recipe::Recipe, video::Payload};
+use crate::{cli::Arguments, cmd::SmCommand, video::Payload};
 use std::env;
 use utils::verbosity_init;
 
@@ -41,7 +40,8 @@ fn main() {
     let mut args: Arguments = cli::setup_args();
     // args.input is the only one being mutated in video.rs
 
-    let recipe: Recipe = recipe::get_recipe(&mut args);
+    // Recipe and WidgetMetadata
+    let (mut recipe, _metadata) = recipe::get_recipe(&mut args);
     // mutable because args.verbose sets `[miscellaneous] always verbose:` to true
     // loads defaults.ini, then overrides recipe.ini over it
 
@@ -63,9 +63,17 @@ fn main() {
         utils::set_window_position(&recipe);
     }
 
-    let payloads: Vec<Payload> = video::resolve_input(&mut args, &recipe);
+    let _payloads: Vec<Payload>;
 
-    let commands: Vec<SmCommand> = cmd::build_commands(args, payloads, recipe);
+    if args.input.is_empty() && !args.tui {
+        let _ = gui::sm_gui(recipe.clone(), _metadata);
+        _payloads = vec![];
+    } else {
+        _payloads = video::resolve_input(&mut args, &recipe);
+    }
+    
+
+    let commands: Vec<SmCommand> = cmd::build_commands(args, _payloads, recipe);
 
     render::_vpipe_render2(commands);
 }

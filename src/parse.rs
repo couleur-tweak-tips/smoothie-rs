@@ -26,6 +26,8 @@ pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
             .unwrap()
             .join("encoding_presets.ini"),
         &mut enc_arg_presets,
+        &mut None,
+        false
     );
     // dbg!(&enc_arg_presets);
 

@@ -30,6 +30,12 @@ indicatif = { version = "0.17.2", features = ["improved_unicode"] }
 regex = "1.7.2"
 indexmap = { version = "2.2.6", features = ["serde"] }
 
+# gui-related
+eframe = "0.27.2" # egui 'frame'work
+env_logger = "0.11.3"
+winit = "0.29.15" # load icon
+image = "0.25.1" # load icon
+
 [build-dependencies]
 winres = "0.1" # give the exe an icon
 cc = "1.0.79"  # for /src/windows.c

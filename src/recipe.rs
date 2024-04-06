@@ -1,17 +1,20 @@
 use crate::cli::Arguments;
 use crate::verb;
-use indexmap::map::Keys;
+use indexmap::map::Entry;
 use indexmap::map::IndexMap;
+use indexmap::map::Keys;
 use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct Recipe {
     #[serde(with = "indexmap::map::serde_seq")]
     pub data: IndexMap<String, IndexMap<String, String>>,
 }
+
+pub type WidgetMetadata = IndexMap<String, IndexMap<String, IndexMap<String, String>>>;
 
 impl Recipe {
     pub fn new() -> Recipe {
@@ -22,6 +25,10 @@ impl Recipe {
 
     pub fn contains_key(&mut self, key: &str) -> bool {
         self.data.contains_key(key)
+    }
+
+    pub fn entry(&mut self, key: String) -> Entry<String, IndexMap<String, String>>{
+        return self.data.entry(key)
     }
 
     pub fn keys(&mut self) -> Keys<'_, String, IndexMap<String, String>> {
@@ -73,6 +80,16 @@ impl Recipe {
             None => panic!("Recipe section not found: `{section}`"),
         }
     }
+    
+    pub fn get_mut(&mut self, section: &str, key: &str) -> &mut String {
+        match self.data.get_mut(section) {
+            Some(section) => match section.get_mut(key) {
+                Some(value) => value,
+                None => panic!("Recipe get_mut:  failed to get {key:?}"),
+            },
+            None => panic!("Recipe section not found: `{section}`"),
+        }
+    }
 
     pub fn get_section(&self, section: &str) -> &IndexMap<String, String> {
         match self.data.get(section) {
@@ -82,7 +99,12 @@ impl Recipe {
     }
 }
 
-pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
+pub fn parse_recipe(
+    ini: PathBuf,
+    rc: &mut Recipe,
+    meta: &mut Option<WidgetMetadata>,
+    first_run: bool,
+) {
     assert!(ini.exists(), "Recipe at path `{ini:?}` does not exist");
     verb!(
         "Parsing: {}",
@@ -108,12 +130,13 @@ pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
         Err(e) => panic!("Error reading file: {}", e),
     };
 
+    let lines: Vec<&str> = content.split('\n').map(|s| s.trim()).collect();
     let mut cur_category = String::new();
-    let mut round = 1;
+    // let mut round = 1;
 
-    for mut cur in content.split('\n') {
-        cur = cur.trim();
-        round += 1;
+    for i in 0..lines.len() {
+        let cur = lines[i];
+        // round += 1;
 
         match cur {
             // an empty line or comment, just like this one
@@ -140,8 +163,13 @@ pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
 
             // weighting: gaussian
             setting if cur.contains(':') => {
+                // rc
                 if cur_category.is_empty() {
-                    panic!("Recipe: Setting {setting:?} has no parent category, line {round}");
+                    panic!(
+                        "Recipe: Setting {:?} has no parent category, line {}",
+                        setting,
+                        i + 1
+                    );
                 }
 
                 let (key, value) = setting
@@ -158,14 +186,58 @@ pub fn parse_recipe(ini: PathBuf, rc: &mut Recipe) {
                     key.trim().to_string(),
                     value.trim().to_string(),
                 );
+
+                // meta
+                let previous_line = lines[i - 1];
+
+                if let Some(mut inner_meta) = meta.take() {
+
+                    if first_run && previous_line.starts_with("#{") {
+                        let meta_defs: Vec<String> = previous_line
+                            .strip_prefix("#{")
+                            .unwrap()
+                            .strip_suffix("}")
+                            .unwrap()
+                            .split(";")
+                            .map(|s| s.trim().to_string())
+                            .collect();
+
+                        for meta_definition in meta_defs {
+
+                            let (meta_key, meta_value) = meta_definition
+                                .split_once(':')
+                                .expect("Recipe: Failed to split_once a key");
+
+                            
+
+                            inner_meta
+                                .entry(cur_category.clone())
+                                .or_insert_with(IndexMap::new)
+                                .entry(key.to_string())
+                                .or_insert_with(IndexMap::new)
+                                .insert(meta_key.trim().to_string(), meta_value.trim().to_string());
+                        }
+                    } else if !first_run {
+                        // inner_meta[cur_category][key][enabled] = true
+
+                        inner_meta
+                            .entry(cur_category.clone())
+                            .or_insert_with(IndexMap::new)
+                            .entry(key.to_string())
+                            .or_insert_with(IndexMap::new)
+                            .insert("display".to_string(), "true".to_string());
+                    }
+
+                    *meta = Some(inner_meta);
+                }
             }
             // forgot to put val into a comment!
-            _ => panic!("Recipe: Failed to parse {cur:?}, line {round}"),
+            _ => panic!("Recipe: Failed to parse {:?}, line {}", cur, i + 1),
         }
     }
 }
 
-pub fn get_recipe(args: &mut Arguments) -> Recipe {
+pub fn get_recipe(args: &mut Arguments) -> (Recipe, WidgetMetadata) {
     let exe = match env::current_exe() {
         Ok(exe) => exe,
         Err(e) => panic!("Could not resolve Smoothie's binary path: {}", e),
@@ -190,9 +262,15 @@ pub fn get_recipe(args: &mut Arguments) -> Recipe {
     };
 
     let mut rc: Recipe = Recipe::new();
+    let mut metadata = Some(WidgetMetadata::new());
 
-    parse_recipe(Path::join(bin_dir, "defaults.ini"), &mut rc);
-    parse_recipe(rc_path, &mut rc);
+    parse_recipe(
+        Path::join(bin_dir, "defaults.ini"),
+        &mut rc,
+        &mut metadata,
+        true,
+    );
+    parse_recipe(rc_path, &mut rc, &mut metadata, false);
 
     if args.r#override.is_some() {
         // dbg!(&args.r#override);
@@ -223,5 +301,5 @@ pub fn get_recipe(args: &mut Arguments) -> Recipe {
         );
     }
 
-    rc
+    (rc, metadata.unwrap())
 }
