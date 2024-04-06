@@ -9,7 +9,7 @@ use which::which;
 pub struct Payload {
     pub in_path: PathBuf,  // D:\obs stuff\video.mp4
     pub out_path: PathBuf, // D:\obs stuff\video ~ Mango.mp4
-    pub basename: String,  // video
+    pub basename: String,  // Equivalent to .NET's [IO.Path]::GetFileNameWithoutExtension
     pub probe: FfProbe,    // provided by ffprobe
     pub timecodes: Option<Vec<Timecodes>>,
 }
