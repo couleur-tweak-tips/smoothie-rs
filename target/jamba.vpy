@@ -250,9 +250,59 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
         model_path = relative_model_path
 
     og_format = clip.format
-    og_matrix = clip.get_frame(0).props._Matrix
-    clip = core.resize.Bicubic(clip=clip, format=vs.RGBS)
 
+    # taken github user cid-chan from Irrational-Encoding-Wizardry/vs-engine
+    # https://github.com/Irrational-Encoding-Wizardry/vs-engine/commit/36595806cfee0a07a70406d27dfed2d1f6c7e57e
+    def yuv_heuristic(width: int, height: int) :
+        result = {}
+
+        if width >= 3840:
+            result["matrix_in_s"] = "2020ncl"
+        elif width >= 1280:
+            result["matrix_in_s"] = "709"
+        elif height == 576:
+            result["matrix_in_s"] = "470bg"
+        else:
+            result["matrix_in_s"] = "170m"
+
+        if width >= 3840:
+            result["transfer_in_s"] = "st2084"
+        elif width >= 1280:
+            result["transfer_in_s"] = "709"
+        elif height == 576:
+            result["transfer_in_s"] = "470bg"
+        else:
+            result["transfer_in_s"] = "601"
+
+        if width >= 3840:
+            result["primaries_in_s"] = "2020"
+        elif width >= 1280:
+            result["primaries_in_s"] = "709"
+        elif height == 576:
+            result["primaries_in_s"] = "470bg"
+        else:
+            result["primaries_in_s"] = "170m"
+
+        result["range_in_s"] = "limited"
+
+        # ITU-T H.273 (07/2021), Note at the bottom of pg. 20
+        if width >= 3840:
+            result["chromaloc_in_s"] = "top_left"
+        else:
+            result["chromaloc_in_s"] = "left"
+
+        return result
+
+
+    heuristic = yuv_heuristic(clip.width, clip.height)
+
+    not_in_heuristic = {}
+
+    for key, value in heuristic.items():
+        not_in_heuristic[key.replace('_in', '')] = value
+
+
+    clip = core.resize.Bicubic(clip, format=vs.RGBS, **heuristic)
     factor = pi['factor'].strip('x')
 
     if pi['masking'] in YES:
@@ -278,7 +328,7 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
             original_clip=og_clip
         )
 
-    clip = core.resize.Bicubic(clip=clip, format=og_format, matrix=og_matrix)
+    clip = core.resize.Bicubic(clip=clip, format=og_format, **not_in_heuristic)
     # eprint(f"og_matrix:{og_matrix}")
     # eprint(f"pre-interp\n{clip}")
 # pre-interp
