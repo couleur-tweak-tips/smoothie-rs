@@ -140,6 +140,15 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
 
         if args.tompv {
             // nothing to do, but this still needs to step in to break out the if chain
+            if let Some(p) = args.peek {
+                // duplicate sowwy :33
+                cur_vs_args.append(&mut vec![
+                    "--start".to_owned(),
+                    p.to_string(),
+                    "--end".to_owned(),
+                    p.to_string()
+                ]);
+            }
         } else if args.tonull {
             cur_cmd_arguments.append(&mut vec![
                 "-i".to_owned(),
@@ -149,9 +158,15 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
                 "NUL".to_owned(),
             ]);
             // cur_cmd_arguments.push(format!(" -i {:?} -f null NUL ", payload.in_path));
-        } else if args.peek.is_some() {
         } else {
-            if args.stripaudio {
+            if let Some(p) = args.peek {
+                cur_vs_args.append(&mut vec![
+                    "--start".to_owned(),
+                    p.to_string(),
+                    "--end".to_owned(),
+                    p.to_string()
+                ]);
+            } else if args.stripaudio {
                 cur_cmd_arguments.append(&mut enc_args.clone());
             } else {
                 cur_cmd_arguments.append(&mut vec![
