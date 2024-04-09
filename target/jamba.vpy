@@ -351,6 +351,27 @@ if (ip := rc['interpolation'])['enabled'].lower() in YES:
         og_clip = clip
         new_fps = int(ip['fps'])
 
+    def ScaleLuminance (scale: bool, clip: vs.VideoNode):
+        y = core.std.ShufflePlanes(clip, planes=0, colorfamily=vs.GRAY)
+        u = core.std.ShufflePlanes(clip, planes=1, colorfamily=vs.GRAY)
+        v = core.std.ShufflePlanes(clip, planes=2, colorfamily=vs.GRAY)
+
+        if scale: # up
+            y = core.resize.Point(y, width=y.width * 2, height=y.height * 2)    
+        else: # down
+            y = core.resize.Point(y, width=y.width / 2, height=y.height / 2)    
+
+        clip = core.std.ShufflePlanes(clips=[y, u, v], planes=[0, 0, 0], colorfamily=vs.YUV)
+
+        return clip
+
+    if clip.format.id in [vs.YUV444P8]:
+        scaled = True
+        print("WARNING: (SVPFlow) Interpolation with i444 is normally not compatible, using a slower workaround.", file=sys.stderr)
+        clip = ScaleLuminance(scale=True, clip=clip)
+    else:
+        scaled = False
+
     clip = havsfunc.InterFrame(
         Input=clip,
         GPU=ip['use gpu'].lower() in YES,
@@ -362,6 +383,9 @@ if (ip := rc['interpolation'])['enabled'].lower() in YES:
         OverrideBlockSize=ip['block size'],
         OverrideArea=area
     )
+
+    if scaled:
+        clip = ScaleLuminance(scale=False, clip=clip)
 
     if ip['masking'] in YES:
         clip = Masking(
