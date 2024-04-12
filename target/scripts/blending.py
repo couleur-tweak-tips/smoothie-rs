@@ -18,9 +18,9 @@ logging.basicConfig(level=logging.DEBUG)
 def average(clip: vs.VideoNode, weights: List[float], divisor: float = None):
     def get_offset_clip(offset: int) -> vs.VideoNode:
         if offset > 0:
-            return clip[0] * offset + clip[:-offset]
+            return clip[offset:] + clip[-1] * offset
         elif offset < 0:
-            return clip[-offset:] + clip[-1] * (-offset)
+            return clip[0] * -offset + clip[:offset]
         else:
             return clip
 
