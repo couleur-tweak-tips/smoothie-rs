@@ -1,17 +1,65 @@
-use std::io::prelude::*;
-use std::io::BufReader;
+
 
 use crate::cmd::SmCommand;
-
-use regex::Regex;
-use std::process::{ChildStderr, Command, Stdio};
+use std::process::{Command, Stdio};
 
 use crate::verb;
 use std::env;
 
-//use crate::ffpb::ffmpeg;
+pub fn vspipe_render(commands: Vec<SmCommand>) {
+    for cmd in commands {
+        let previewing: bool =
+            cmd.recipe.get_bool("preview window", "enabled") && cmd.ffplay_args.is_some();
+
+        verb!("FF args: {}", cmd.ff_args.join(" "));
+
+        if previewing {
+            verb!(
+                "FFplay args: {}",
+                &cmd.ffplay_args.clone().unwrap().join(" ")
+            );
+        }
+
+        let mut vs = Command::new(cmd.vs_path)
+            .args(cmd.vs_args)
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("Failed in spawning FFmpeg child");
+
+        let pipe = vs.stdout.take().expect("Failed piping out of VSPipe");
+
+        let mut ffmpeg = Command::new(cmd.ff_path)
+            .args(cmd.ff_args)
+            .stdin(pipe)
+            .stdout(if previewing {
+                Stdio::piped()
+            } else {
+                Stdio::inherit()
+            })
+            .spawn()
+            .expect("Failed in spawning FFmpeg child");
+
+        if previewing {
+            let ffplay_pipe = ffmpeg.stdout.take().expect("Failed piping out of FFmpeg");
+            let ffplay = Command::new(cmd.ffplay_path.unwrap())
+                .args(cmd.ffplay_args.unwrap())
+                .stdin(ffplay_pipe)
+                .spawn()
+                .expect("Failed in spawning ffplay child");
+            ffplay.wait_with_output().unwrap();
+        }
+
+        vs.wait_with_output().unwrap();
+        ffmpeg.wait_with_output().unwrap();
+    }
+}
+/*
+use std::io::prelude::*;
+use std::io::BufReader;
+use regex::Regex;
+use std::process::{ChildStderr};
 use indicatif::{ProgressBar, ProgressStyle};
-// use crate::ffpb::ffmpeg;
+use crate::ffpb::ffmpeg;
 
 pub fn _teres_render(commands: Vec<SmCommand>) {
     for cmd in commands {
@@ -41,7 +89,7 @@ pub fn _teres_render(commands: Vec<SmCommand>) {
                         " [{}] {{wide_bar:.cyan/blue}} {{percent}}% | ETA: {{eta_precise}}",
                         cmd.payload.basename
                     )
-                    .as_str(),
+                        .as_str(),
                 )
                 .unwrap(),
         );
@@ -133,53 +181,6 @@ pub fn _vspipe_render(commands: Vec<SmCommand>) {
     }
 }
 
-pub fn _vpipe_render2(commands: Vec<SmCommand>) {
-    for cmd in commands {
-        let previewing: bool =
-            cmd.recipe.get_bool("preview window", "enabled") && cmd.ffplay_args.is_some();
-
-        verb!("FF args: {}", cmd.ff_args.join(" "));
-
-        if previewing {
-            verb!(
-                "FFplay args: {}",
-                &cmd.ffplay_args.clone().unwrap().join(" ")
-            );
-        }
-
-        let mut vs = Command::new(cmd.vs_path)
-            .args(cmd.vs_args)
-            .stdout(Stdio::piped())
-            .spawn()
-            .expect("Failed in spawning FFmpeg child");
-
-        let pipe = vs.stdout.take().expect("Failed piping out of VSPipe");
-
-        let mut ffmpeg = Command::new(cmd.ff_path)
-            .args(cmd.ff_args)
-            .stdin(pipe)
-            .stdout(if previewing {
-                Stdio::piped()
-            } else {
-                Stdio::inherit()
-            })
-            .spawn()
-            .expect("Failed in spawning FFmpeg child");
-
-        if previewing {
-            let ffplay_pipe = ffmpeg.stdout.take().expect("Failed piping out of FFmpeg");
-            let ffplay = Command::new(cmd.ffplay_path.unwrap())
-                .args(cmd.ffplay_args.unwrap())
-                .stdin(ffplay_pipe)
-                .spawn()
-                .expect("Failed in spawning ffplay child");
-            ffplay.wait_with_output().unwrap();
-        }
-
-        vs.wait_with_output().unwrap();
-        ffmpeg.wait_with_output().unwrap();
-    }
-}
 
 fn _old_ffpb(cmd: SmCommand, previewing: bool) {
     let mut vs = Command::new(cmd.vs_path)
@@ -219,3 +220,4 @@ fn _old_ffpb(cmd: SmCommand, previewing: bool) {
         // ffplay.wait_with_output().unwrap();
     }
 }
+*/

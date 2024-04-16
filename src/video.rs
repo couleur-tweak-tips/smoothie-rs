@@ -1,4 +1,5 @@
 use crate::{cli::Arguments, recipe::Recipe};
+use color_eyre::owo_colors::OwoColorize;
 use ffprobe::FfProbe;
 use rand::seq::SliceRandom;
 use rfd::FileDialog;
@@ -39,7 +40,11 @@ fn probe_video(input: &PathBuf) -> Option<FfProbe> {
     let path = match input.canonicalize() {
         Ok(path) => path,
         _ => {
-            println!("{input:?} does not exist or is not a valid filepath, discarding..");
+            println!(
+                "{}",
+                format!("{input:?} does not exist or is not a valid filepath, discarding..")
+                    .on_red()
+            );
             return None;
         }
     };
@@ -239,12 +244,7 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
     // Option 1: launched a shortcut that had --tui in args
     if args.tui && args.input.is_empty() && args.json.is_none() {
         let input = FileDialog::new()
-            .add_filter(
-                "Video file",
-                &[
-                    "mp4", "mkv", "webm", "mov", "avi", "wmv", "flv", "ts", "m3u8", "qt", "m4v",
-                ],
-            )
+            .add_filter("Video file", crate::VIDEO_EXTENSIONS)
             .set_title("Select video(s) to queue to Smoothie")
             .set_directory("/")
             .pick_files();

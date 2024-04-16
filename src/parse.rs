@@ -25,7 +25,10 @@ pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
             .parent()
             .unwrap()
             .join("encoding_presets.ini"),
+        None,
         &mut enc_arg_presets,
+        &mut None,
+        false,
     );
     // dbg!(&enc_arg_presets);
 

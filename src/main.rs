@@ -1,21 +1,9 @@
 #[macro_use] // to parse --json in video.rs
 extern crate serde_derive;
-extern crate clap;
-extern crate serde;
-extern crate serde_json;
-
-extern crate colored;
-extern crate ffprobe; // cli wrapper
-
-// rustsynth output
-extern crate anyhow;
-extern crate num_rational;
-
-// progress bar, used in ffpb.rs
-extern crate regex;
 
 mod cli;
 mod cmd;
+mod smgui;
 // mod ffpb;
 // mod ffpb2;
 mod parse;
@@ -25,9 +13,22 @@ mod utils;
 //mod vapoursynth;
 mod video;
 
-use crate::{cli::Arguments, cmd::SmCommand, recipe::Recipe, video::Payload};
+use crate::{cli::Arguments, cmd::SmCommand, video::Payload};
 use std::env;
 use utils::verbosity_init;
+
+const VIDEO_EXTENSIONS: &[&str] = &[
+    "mp4", "mkv", "webm", "mov", "avi", "wmv", "flv", "ts", "m3u8", "qt", "m4v",
+];
+
+const YES: &[&str] = &[
+    "on", "True", "true", "yes", "y", "1", "yeah", "yea", "yep", "sure", "positive",
+];
+
+const NO: &[&str] = &[
+    "off", "False", "false", "no", "n", "nah", "nope", "negative", "negatory", "0", "0.0", "null",
+    "", " ", "  ", "\t", "none",
+];
 
 fn main() {
     if enable_ansi_support::enable_ansi_support().is_err() {
@@ -40,7 +41,8 @@ fn main() {
     let mut args: Arguments = cli::setup_args();
     // args.input is the only one being mutated in video.rs
 
-    let recipe: Recipe = recipe::get_recipe(&mut args);
+    // Recipe and WidgetMetadata
+    let (recipe, _metadata) = recipe::get_recipe(&mut args);
     // mutable because args.verbose sets `[miscellaneous] always verbose:` to true
     // loads defaults.ini, then overrides recipe.ini over it
 
@@ -62,9 +64,14 @@ fn main() {
         utils::set_window_position(&recipe);
     }
 
-    let payloads: Vec<Payload> = video::resolve_input(&mut args, &recipe);
-
-    let commands: Vec<SmCommand> = cmd::build_commands(args, payloads, recipe);
-
-    render::_vpipe_render2(commands);
+    let payloads: Vec<Payload>;
+    // dbg!(&_metadata);
+    if args.input.is_empty() {
+        let _result = smgui::sm_gui(recipe.clone(), _metadata, args.recipe.clone(), args);
+        // payloads = vec![];
+    } else {
+        payloads = video::resolve_input(&mut args, &recipe);
+        let commands: Vec<SmCommand> = cmd::build_commands(args, payloads, recipe);
+        render::vspipe_render(commands);
+    }
 }
