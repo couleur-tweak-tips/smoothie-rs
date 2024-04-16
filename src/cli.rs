@@ -32,7 +32,7 @@ pub struct Arguments {
 
     /// Overrides output to an image of frame number passed
     #[clap(long, conflicts_with = "encargs")]
-    pub peek: Option<i32>,
+    pub peek: Option<u64>,
 
     /// Pass a .vpy script to evaluate nodes from
     #[clap(long, default_value = "jamba.vpy")]

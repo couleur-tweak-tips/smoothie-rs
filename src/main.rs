@@ -1,5 +1,6 @@
 #[macro_use] // to parse --json in video.rs
 extern crate serde_derive;
+
 mod cli;
 mod cmd;
 mod smgui;
