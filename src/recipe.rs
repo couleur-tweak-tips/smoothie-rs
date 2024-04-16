@@ -1,5 +1,6 @@
 use crate::cli::Arguments;
 use crate::verb;
+use crate::{NO, YES};
 use indexmap::map::Entry;
 use indexmap::map::IndexMap;
 use indexmap::map::Keys;
@@ -27,8 +28,8 @@ impl Recipe {
         self.data.contains_key(key)
     }
 
-    pub fn entry(&mut self, key: String) -> Entry<String, IndexMap<String, String>>{
-        return self.data.entry(key)
+    pub fn _entry(&mut self, key: String) -> Entry<String, IndexMap<String, String>> {
+        return self.data.entry(key);
     }
 
     pub fn keys(&mut self) -> Keys<'_, String, IndexMap<String, String>> {
@@ -53,9 +54,6 @@ impl Recipe {
     }
 
     pub fn get_bool(&self, section: &str, key: &str) -> bool {
-        let pos = vec!["yes", "ye", "y", "on", "enabled", "1"];
-        let neg = vec!["no", "na", "n", "off", "disabled", "0"];
-
         let bool_str = match self.data.get(section) {
             Some(section) => match section.get(key) {
                 Some(value) => value,
@@ -65,9 +63,8 @@ impl Recipe {
         };
 
         match bool_str {
-            _ if pos.contains(&bool_str.to_lowercase().as_str()) => true,
-            _ if neg.contains(&bool_str.to_lowercase().as_str()) => false,
-            _ => panic!("Unknown boolean (true/false value): {bool_str:?}"),
+            _ if crate::YES.contains(&bool_str.to_lowercase().as_str()) => true,
+            _ => false,
         }
     }
 
@@ -80,11 +77,11 @@ impl Recipe {
             None => panic!("Recipe section not found: `{section}`"),
         }
     }
-    
-    pub fn get_mut(&mut self, section: &str, key: &str) -> &mut String {
+
+    pub fn _get_mut(&mut self, section: &str, key: &str) -> String {
         match self.data.get_mut(section) {
             Some(section) => match section.get_mut(key) {
-                Some(value) => value,
+                Some(value) => value.to_string(),
                 None => panic!("Recipe get_mut:  failed to get {key:?}"),
             },
             None => panic!("Recipe section not found: `{section}`"),
@@ -93,7 +90,14 @@ impl Recipe {
 
     pub fn get_section(&self, section: &str) -> &IndexMap<String, String> {
         match self.data.get(section) {
-            Some(section) => section,
+            Some(ret) => &ret,
+            None => panic!("Recipe section not found: `{section}`"),
+        }
+    }
+
+    pub fn get_section_mut(&mut self, section: &str) -> &mut IndexMap<String, String> {
+        match self.data.get_mut(section) {
+            Some(ret) => ret,
             None => panic!("Recipe section not found: `{section}`"),
         }
     }
@@ -101,41 +105,51 @@ impl Recipe {
 
 pub fn parse_recipe(
     ini: PathBuf,
+    recipe_str: Option<String>,
     rc: &mut Recipe,
     meta: &mut Option<WidgetMetadata>,
     first_run: bool,
 ) {
-    assert!(ini.exists(), "Recipe at path `{ini:?}` does not exist");
-    verb!(
-        "Parsing: {}",
-        ini.display().to_string().replace("\\\\?\\", "")
-    );
+    let content = if let Some(rc_str) = recipe_str {
+        rc_str
+    } else {
+        assert!(ini.exists(), "Recipe at path `{ini:?}` does not exist");
+        verb!(
+            "Parsing: {}",
+            ini.display().to_string().replace("\\\\?\\", "")
+        );
 
-    let mut file = match File::open(&ini) {
-        Ok(file) => file,
-        Err(e) => panic!("Error opening file: {}", e),
+        let mut file = match File::open(&ini) {
+            Ok(file) => file,
+            Err(e) => panic!("Error opening file: {}", e),
+        };
+
+        let metadata = match file.metadata() {
+            Ok(metadata) => metadata,
+            Err(e) => panic!("Error getting file metadata: {}", e),
+        };
+        if metadata.len() == 0 {
+            panic!("Error: File is empty: {file:?}");
+        }
+
+        let mut content = String::new();
+        match file.read_to_string(&mut content) {
+            Ok(_) => (),
+            Err(e) => panic!("Error reading file: {}", e),
+        };
+
+        content
     };
 
-    let metadata = match file.metadata() {
-        Ok(metadata) => metadata,
-        Err(e) => panic!("Error getting file metadata: {}", e),
-    };
-    if metadata.len() == 0 {
-        panic!("Error: File is empty: {file:?}");
-    }
-
-    let mut content = String::new();
-    match file.read_to_string(&mut content) {
-        Ok(_) => (),
-        Err(e) => panic!("Error reading file: {}", e),
-    };
-
-    let lines: Vec<&str> = content.split('\n').map(|s| s.trim()).collect();
+    let lines: Vec<String> = content
+        .split('\n')
+        .map(|s| s.trim().replace("\u{feff}", ""))
+        .collect();
     let mut cur_category = String::new();
     // let mut round = 1;
 
     for i in 0..lines.len() {
-        let cur = lines[i];
+        let cur = &lines[i];
         // round += 1;
 
         match cur {
@@ -172,9 +186,15 @@ pub fn parse_recipe(
                     );
                 }
 
-                let (key, value) = setting
-                    .split_once(':')
-                    .expect("Recipe: Failed to split_once a key");
+                let (key, value) = if let Some((key, value)) = setting.split_once(':') {
+                    (key.trim(), value.trim())
+                } else {
+                    panic!("Recipe: Failed to split_once a key")
+                };
+
+                // let (key, value) = setting
+                //     .split_once(':')
+                //     .expect("Recipe: Failed to split_once a key");
 
                 if key.trim() == "∞" {
                     println!("You buffoon.");
@@ -188,27 +208,23 @@ pub fn parse_recipe(
                 );
 
                 // meta
-                let previous_line = lines[i - 1];
+                let previous_line = &lines[i - 1];
 
-                if let Some(mut inner_meta) = meta.take() {
-
+                let is_value_bool = if let Some(mut inner_meta) = meta.take() {
                     if first_run && previous_line.starts_with("#{") {
                         let meta_defs: Vec<String> = previous_line
                             .strip_prefix("#{")
                             .unwrap()
-                            .strip_suffix("}")
+                            .strip_suffix('}')
                             .unwrap()
-                            .split(";")
+                            .split(';')
                             .map(|s| s.trim().to_string())
                             .collect();
 
                         for meta_definition in meta_defs {
-
                             let (meta_key, meta_value) = meta_definition
                                 .split_once(':')
                                 .expect("Recipe: Failed to split_once a key");
-
-                            
 
                             inner_meta
                                 .entry(cur_category.clone())
@@ -217,24 +233,155 @@ pub fn parse_recipe(
                                 .or_insert_with(IndexMap::new)
                                 .insert(meta_key.trim().to_string(), meta_value.trim().to_string());
                         }
-                    } else if !first_run {
-                        // inner_meta[cur_category][key][enabled] = true
 
                         inner_meta
                             .entry(cur_category.clone())
                             .or_insert_with(IndexMap::new)
                             .entry(key.to_string())
                             .or_insert_with(IndexMap::new)
-                            .insert("display".to_string(), "true".to_string());
+                            .insert("default".to_string(), value.trim().to_string());
+
+                        inner_meta
+                            .entry(cur_category.clone())
+                            .or_insert_with(IndexMap::new)
+                            .entry("_sm_category".to_string())
+                            .or_insert_with(IndexMap::new)
+                            .insert("display".to_string(), "no".to_string());
+
+                        inner_meta
+                            .entry(cur_category.clone())
+                            .or_insert_with(IndexMap::new)
+                            .entry(key.to_owned())
+                            .or_insert_with(IndexMap::new)
+                            .insert("display".to_string(), "no".to_string());
+                    } else if !first_run {
+                        // inner_meta[cur_category][key][enabled] = true
+                        inner_meta
+                            .entry(cur_category.clone())
+                            .or_insert_with(IndexMap::new)
+                            .entry(key.to_owned())
+                            .or_insert_with(IndexMap::new)
+                            .insert("display".to_string(), "yes".to_string());
+
+                        inner_meta
+                            .entry(cur_category.clone())
+                            .or_insert_with(IndexMap::new)
+                            .entry("_sm_category".to_string())
+                            .or_insert_with(IndexMap::new)
+                            .insert("display".to_string(), "yes".to_string());
+                    } else {
+                        panic!("WHAT.")
                     }
 
-                    *meta = Some(inner_meta);
+                    *meta = Some(inner_meta.clone());
+
+                    inner_meta
+                        .get(&cur_category)
+                        .unwrap()
+                        .get(key)
+                        .unwrap()
+                        .get("type")
+                        .unwrap()
+                        == "bool"
+                } else {
+                    // metadata is not passed, there is no need to assume
+                    false
+                };
+
+                if is_value_bool {
+                    if YES.contains(&value) {
+                        rc.insert_value(&cur_category, key.trim().to_string(), "yes".to_string());
+                    } else if NO.contains(&value) {
+                        rc.insert_value(&cur_category, key.trim().to_string(), "no".to_string());
+                    } else {
+                        dbg!(&value);
+                        dbg!(&YES);
+                        dbg!(&NO);
+                        panic!("Invalid boolean value");
+                    }
                 }
             }
             // forgot to put val into a comment!
             _ => panic!("Recipe: Failed to parse {:?}, line {}", cur, i + 1),
         }
     }
+}
+
+// converts a Recipe object to a serialized String to be copied to copied to the clipboard / wrote to a file
+pub fn export_recipe(
+    recipe: Recipe,
+    meta: &WidgetMetadata,
+    omit_removed_categories: bool,
+    omit_removed_keys: bool,
+    convert_aliases_to_bools: bool,
+) -> String {
+    // dbg!(&meta);
+    let mut buffer = String::new();
+    let mut inner_recipe = recipe.clone();
+
+    for cat in inner_recipe.keys() {
+        if meta
+            .get(cat)
+            .unwrap()
+            .get("_sm_category")
+            .unwrap()
+            .get("display")
+            .unwrap()
+            == "false"
+        {
+            continue;
+        }
+
+        if omit_removed_categories {
+            if let Some(enabled) = recipe.data.get(cat).unwrap().get("enabled") {
+                if !YES.contains(&enabled.to_lowercase().as_str()) {
+                    continue;
+                }
+            }
+        }
+
+        buffer.push_str(("[".to_owned() + cat + "]\n").as_str());
+
+        for (key, value) in recipe.get_section(cat) {
+            if omit_removed_keys
+                && meta
+                    .get(cat)
+                    .unwrap()
+                    .get(key)
+                    .unwrap()
+                    .get("display")
+                    .unwrap()
+                    == "no"
+            {
+                continue;
+            }
+
+            // overwrite as "true" / "false" if needed
+            let value = if convert_aliases_to_bools
+                && meta
+                    .get(cat)
+                    .unwrap()
+                    .get(key)
+                    .unwrap()
+                    .get("type")
+                    .unwrap()
+                    == "bool"
+            {
+                if YES.contains(&value.as_str()) {
+                    "yes".to_owned()
+                } else if NO.contains(&value.as_str()) {
+                    "no".to_string()
+                } else {
+                    panic!("Unknown ");
+                }
+            } else {
+                value.to_string()
+            };
+            buffer.push_str((key.to_owned() + ": " + value.as_str() + "\n").as_str());
+        }
+        buffer.push('\n');
+    }
+    buffer
 }
 
 pub fn get_recipe(args: &mut Arguments) -> (Recipe, WidgetMetadata) {
@@ -260,17 +407,25 @@ pub fn get_recipe(args: &mut Arguments) -> (Recipe, WidgetMetadata) {
         }
         cur_dir_rc
     };
+    args.recipe = rc_path.display().to_string();
 
     let mut rc: Recipe = Recipe::new();
     let mut metadata = Some(WidgetMetadata::new());
 
     parse_recipe(
         Path::join(bin_dir, "defaults.ini"),
+        None,
         &mut rc,
         &mut metadata,
         true,
     );
-    parse_recipe(rc_path, &mut rc, &mut metadata, false);
+    parse_recipe(
+        rc_path,
+        args.recipe_str.clone(),
+        &mut rc,
+        &mut metadata,
+        false,
+    );
 
     if args.r#override.is_some() {
         // dbg!(&args.r#override);

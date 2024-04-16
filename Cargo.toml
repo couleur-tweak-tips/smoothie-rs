@@ -8,11 +8,11 @@ build = "build.rs"
 [dependencies]
 clap = {version = "4.1.4 ", features = ["derive"] } # cli arg helper
 color-eyre = "0.6.2" # error handling
-ffprobe = "0.3.3"
+ffprobe = "0.4.0"
 opener = "0.7.0"  # open file with default app
 rand = "0.8.5"  # randomly choose from fruits for suffix
-rfd = "0.11.0"  # open file dialog
-which = "4.4.0" # Get-Command / where.exe / which alternative
+rfd = "0.14.1"  # open file dialog
+which = "6.0.1" # Get-Command / where.exe / which alternative
 
 # json stuff
 serde = "1.0.152" 
@@ -35,6 +35,7 @@ eframe = "0.27.2" # egui 'frame'work
 env_logger = "0.11.3"
 winit = "0.29.15" # load icon
 image = "0.25.1" # load icon
+copypasta = "0.10.1" # copy to clipboard
 
 [build-dependencies]
 winres = "0.1" # give the exe an icon

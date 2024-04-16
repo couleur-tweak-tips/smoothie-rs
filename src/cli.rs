@@ -4,7 +4,7 @@ use std::io::{Read, Write};
 use std::{env, path::PathBuf, process::Command};
 
 /// Smoothen up your gameplay footage with Smoothie, yum!
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[clap(about, long_about = "", arg_required_else_help = false)]
 pub struct Arguments {
     // io
@@ -122,6 +122,10 @@ pub struct Arguments {
     #[clap(short, long, default_value = "recipe.ini")]
     pub recipe: String,
 
+    /// Specify a recipe string
+    #[clap(long)]
+    pub recipe_str: Option<String>,
+
     /// Override recipe setting(s), e.g: --ov "flowblur;amount;40" "misc;container;MKV"
     #[clap(visible_alias="ov", visible_alias="overide", long, num_args=1..)]
     pub r#override: Option<Vec<String>>,
@@ -159,7 +163,7 @@ Arguments passed:
 
 Note: If your PC is still going BRRR the video might still be rendering :)
 
-Common troubleshooting errors are listed at ctt.cx/video/smoothie/troubleshooting
+Common errors are listed on the troubleshooting page at ctt.cx/smoothie  
 
 If you'd like help, take a screenshot of this message and your recipe and come over to discord.gg/CTT and make a post in #support
                     "#))
