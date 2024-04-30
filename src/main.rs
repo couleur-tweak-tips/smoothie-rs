@@ -4,7 +4,13 @@
 extern crate serde_derive;
 
 use recipe::Recipe;
-use winapi::um::{wincon::GetConsoleWindow, winuser::ShowWindow};
+use render::vspipe_render;
+
+#[cfg(windows)]
+use winapi::um::{
+    wincon::GetConsoleWindow,
+    winuser::ShowWindow,
+};
 
 mod cli;
 mod cmd;
@@ -56,10 +62,12 @@ fn main() {
         recipe.get_bool("miscellaneous", "always verbose"),
     );
 
+    #[cfg(windows)]
     let is_conhost: bool = (env::var("WT_SESSION").is_err() && env::var("ALACRITY_LOG").is_err())
         || env::var("NO_SMOOTHIE_WIN32").is_ok();
     // user is neither running Windows Terminal and alacritty, OR has NO_SMOOTHIE_WIN32 defined
 
+    #[cfg(windows)]
     if args.tui
         && is_conhost
         && cfg!(target_os = "windows")
@@ -71,6 +79,7 @@ fn main() {
 
     let payloads: Vec<Payload>;
     let (recipe, mut args) = if args.input.is_empty() && !args.tui {
+        #[cfg(windows)]
         let hwnd: Option<*mut winapi::shared::windef::HWND__> = if cfg!(windows) {
             unsafe {
                 let hwnd = GetConsoleWindow();
@@ -84,34 +93,43 @@ fn main() {
             None
         };
 
-        if let Some(hwnd) = hwnd {
-            unsafe {
-                ShowWindow(hwnd, winapi::um::winuser::SW_MINIMIZE);
+        let env_var = std::env::var("SM_NOWINDOWINTERACT");
+        let interact: bool = env_var.is_ok() && env_var.unwrap() == "1".to_owned();
+
+        #[cfg(windows)]
+        if interact {
+            if let Some(hwnd) = hwnd {
+                unsafe {
+                    ShowWindow(hwnd, winapi::um::winuser::SW_MINIMIZE);
+                }
             }
         }
 
-        let (sender, receiver) = channel::<(Recipe, Arguments)>();
+        let (sender, receiver) =
+            channel::<(Recipe, Arguments, Option<windows::Win32::Foundation::HWND>)>();
+        
+        let _ret = smgui::sm_gui(recipe.clone(), _metadata, args.recipe.clone(), args, sender);
 
-        if let Err(e) = smgui::sm_gui(recipe.clone(), _metadata, args.recipe.clone(), args, sender)
-        {
-            println!("smoothie egui failed:\n\n{}", e);
-        };
-
-        // for video in receiver.recv().ok().unwrap() {
-        //     dbg!(&video.payload.basename);
-        // }
-
-        if let Some(hwnd) = hwnd {
-            unsafe {
-                ShowWindow(hwnd, winapi::um::winuser::SW_RESTORE);
+        #[cfg(windows)]
+        if interact {
+            if let Some(hwnd) = hwnd {
+                unsafe {
+                    ShowWindow(hwnd, winapi::um::winuser::SW_RESTORE);
+                }
             }
         }
 
-        if let Ok((args, recipe)) = receiver.recv() {
+        if let Ok((args, recipe, hwnd)) = receiver.recv() {
+            unsafe {
+                let _ret = windows::Win32::UI::WindowsAndMessaging::DestroyWindow(hwnd.unwrap());
+                // dbg!(&_ret);
+            }
+
             (args, recipe)
         } else {
-            panic!("Failed retrieving data from GUI");
-            // this also 
+            std::process::exit(0);
+            // panic!("Failed retrieving data from GUI");
+            // this also
         }
     } else {
         // data was already retrieved from CLI, just pass them back
@@ -120,5 +138,5 @@ fn main() {
 
     payloads = video::resolve_input(&mut args, &recipe);
     let commands: Vec<SmCommand> = cmd::build_commands(args, payloads, recipe);
-    render::vspipe_render(commands);
+    vspipe_render(commands);
 }

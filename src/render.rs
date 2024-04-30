@@ -52,14 +52,7 @@ pub fn vspipe_render(commands: Vec<SmCommand>) {
         vs.wait_with_output().unwrap();
         let status = ffmpeg.wait_with_output().unwrap().status;
         if !status.success() {
-            let ffmpeg_code = status.code();
-            eprintln!("ffmpeg returned with error: {:?}", ffmpeg_code);
-            let return_code = if let Some(code) = ffmpeg_code {
-                code
-            } else {
-                0
-            };
-            std::process::exit(return_code);
+            panic!("ffmpeg / vapoursynth did not return sucessfully\n\nIF YOU ARE TAKING A SCREENSHOT WHEN ASKING FOR SUPPORT MAKE SURE TO INCLUDE THE TERMINAL's WHICH IS WHERE THE ERROR IS EXPLAINED");
         }
     }
 }

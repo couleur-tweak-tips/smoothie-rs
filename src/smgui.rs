@@ -9,6 +9,7 @@ use std::{
 };
 use copypasta::{ClipboardContext, ClipboardProvider};
 use eframe::egui;
+use winit::raw_window_handle::HasWindowHandle;
 
 struct SmApp {
     recipe: Recipe,
@@ -22,7 +23,7 @@ struct SmApp {
     start_rendering: bool,
     // yeah that's the damn typename
     recipe_saved: String,
-    sender: Sender<(Recipe, Arguments)>
+    sender: Sender<(Recipe, Arguments, Option<windows::Win32::Foundation::HWND>)>
 }
 
 pub const WINDOW_NAME: &str = "smoothie-app";
@@ -75,22 +76,9 @@ pub fn sm_gui<'gui>(
     metadata: WidgetMetadata,
     recipe_filepath: String,
     args: Arguments,
-    sender: Sender<(Recipe, Arguments)>,
+    sender: Sender<(Recipe, Arguments, Option<windows::Win32::Foundation::HWND>)>,
 ) -> Result<(), eframe::Error> {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
-    let state: SmApp = SmApp {
-        recipe_saved: format!("{:?}", recipe),
-        recipe,
-        metadata,
-        selected_files: vec![], // file select dialog with render button
-        show_confirmation_dialog: false,
-        allowed_to_close: false,
-        show_about: false,
-        recipe_filepath,
-        args,
-        start_rendering: false,
-        sender: sender,
-    };
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -105,19 +93,48 @@ pub fn sm_gui<'gui>(
     eframe::run_native(
         WINDOW_NAME,
         options,
-        Box::new(|_|{Box::new(state)}),
+        Box::new(|_cc|{
+
+            Box::new(
+                SmApp {
+                    recipe_saved: format!("{:?}", recipe),
+                    recipe,
+                    metadata,
+                    selected_files: vec![], // file select dialog with render button
+                    show_confirmation_dialog: false,
+                    allowed_to_close: false,
+                    show_about: false,
+                    recipe_filepath,
+                    args,
+                    start_rendering: false,
+                    sender: sender
+            }
+        )
+    }),
     )
 }
 
+
 impl eframe::App for SmApp {
+    
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             if self.start_rendering {
-
                 let mut scoped_args = self.args.clone();
                 scoped_args.input = self.selected_files.clone();
 
-                let send_result = self.sender.send((self.recipe.clone(), scoped_args));
+
+                let hwnd: Option<windows::Win32::Foundation::HWND> = if cfg!(windows) {
+                    let winit::raw_window_handle::RawWindowHandle::Win32(handle) = _frame.window_handle().unwrap().as_raw() else {
+                        panic!("Unsupported platform");
+                    };
+                    Some(windows::Win32::Foundation::HWND(handle.hwnd.into()))
+                    
+                } else {
+                    None
+                };
+
+                let send_result = self.sender.send((self.recipe.clone(), scoped_args, hwnd));
 
                 if let Err(e) = send_result {
                     eprintln!("Retrieving filepaths from GUI panicked: {:?}", e);
@@ -125,11 +142,20 @@ impl eframe::App for SmApp {
 
                 self.selected_files.clear();
                 self.start_rendering = false;
+       
+                // self.show_confirmation_dialog = true;
+                // self.allowed_to_close = true;
+                // let ctx = ctx.clone();
+                // std::thread::spawn(move || {
+                //     ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
+                // });
+                self.selected_files.clear();
+                self.start_rendering = false;
 
-                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                ctx.request_repaint();
+                // self.show_confirmation_dialog = false;
+                // self.allowed_to_close = true;
+                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
             }
-
             egui::menu::bar(ui, |ui| {
                 egui::widgets::global_dark_light_mode_switch(ui);
                 if ui.button("README").clicked() {
@@ -173,7 +199,6 @@ impl eframe::App for SmApp {
                         if !input_vids.is_empty() {
                             self.selected_files = input_vids;
                             self.start_rendering = true;
-                            // ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                         }
                     }
                 }
@@ -479,7 +504,7 @@ impl eframe::App for SmApp {
                         }
                     });
             }
-
+            
             if ctx.input(|i| i.viewport().close_requested()) && !self.allowed_to_close {
                 {
                     ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
