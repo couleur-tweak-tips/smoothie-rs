@@ -281,7 +281,7 @@ pub fn parse_recipe(
                         .get(key)
                         .unwrap()
                         .get("type")
-                        .unwrap()
+                        .expect(format!("Failed to get 'type' metadata from '[{}] {}:', is there #{{}} metadata for it in defaults.ini?", cur_category, key).as_str())
                         == "bool"
                 } else {
                     // metadata is not passed, there is no need to assume
@@ -294,10 +294,9 @@ pub fn parse_recipe(
                     } else if NO.contains(&value) {
                         rc.insert_value(&cur_category, key.trim().to_string(), "no".to_string());
                     } else {
-                        dbg!(&value);
                         dbg!(&YES);
                         dbg!(&NO);
-                        panic!("Invalid boolean value");
+                        panic!("{}", format!("Invalid boolean value '{}' for '[{}] {}:', replace with any of the two lists above", value, cur_category, key));
                     }
                 }
             }
