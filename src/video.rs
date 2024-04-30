@@ -68,12 +68,13 @@ fn probe_video(input: &PathBuf) -> Option<FfProbe> {
         return None;
     }
 
-    let probe = match ffprobe::ffprobe(path) {
+    let probe = match ffprobe::ffprobe(&path) {
         Ok(a) => a,
         Err(e) => {
-            eprintln!(
+            dbg!(
                 "Skipping input file `{:?}` (failed probing): {:?}",
-                &input, e
+                &input,
+                e
             );
             return None;
         }
@@ -265,6 +266,7 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
                 Some(probe) => probe,
                 None => continue, // filtered out
             };
+
             videos.push((
                 vid.canonicalize()
                     .expect("Failed getting full input file path"),
