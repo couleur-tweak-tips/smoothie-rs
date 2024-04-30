@@ -1,5 +1,10 @@
+// #![windows_subsystem = "windows"]
+
 #[macro_use] // to parse --json in video.rs
 extern crate serde_derive;
+
+use recipe::Recipe;
+use winapi::um::{wincon::GetConsoleWindow, winuser::ShowWindow};
 
 mod cli;
 mod cmd;
@@ -14,7 +19,7 @@ mod utils;
 mod video;
 
 use crate::{cli::Arguments, cmd::SmCommand, video::Payload};
-use std::env;
+use std::{env, sync::mpsc::channel};
 use utils::verbosity_init;
 
 const VIDEO_EXTENSIONS: &[&str] = &[
@@ -65,13 +70,55 @@ fn main() {
     }
 
     let payloads: Vec<Payload>;
-    // dbg!(&_metadata);
-    if args.input.is_empty() {
-        let _result = smgui::sm_gui(recipe.clone(), _metadata, args.recipe.clone(), args);
-        // payloads = vec![];
+    let (recipe, mut args) = if args.input.is_empty() && !args.tui {
+        let hwnd: Option<*mut winapi::shared::windef::HWND__> = if cfg!(windows) {
+            unsafe {
+                let hwnd = GetConsoleWindow();
+                if !hwnd.is_null() {
+                    Some(hwnd)
+                } else {
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
+        if let Some(hwnd) = hwnd {
+            unsafe {
+                ShowWindow(hwnd, winapi::um::winuser::SW_MINIMIZE);
+            }
+        }
+
+        let (sender, receiver) = channel::<(Recipe, Arguments)>();
+
+        if let Err(e) = smgui::sm_gui(recipe.clone(), _metadata, args.recipe.clone(), args, sender)
+        {
+            println!("smoothie egui failed:\n\n{}", e);
+        };
+
+        // for video in receiver.recv().ok().unwrap() {
+        //     dbg!(&video.payload.basename);
+        // }
+
+        if let Some(hwnd) = hwnd {
+            unsafe {
+                ShowWindow(hwnd, winapi::um::winuser::SW_RESTORE);
+            }
+        }
+
+        if let Ok((args, recipe)) = receiver.recv() {
+            (args, recipe)
+        } else {
+            panic!("Failed retrieving data from GUI");
+            // this also 
+        }
     } else {
-        payloads = video::resolve_input(&mut args, &recipe);
-        let commands: Vec<SmCommand> = cmd::build_commands(args, payloads, recipe);
-        render::vspipe_render(commands);
-    }
+        // data was already retrieved from CLI, just pass them back
+        (recipe, args)
+    };
+
+    payloads = video::resolve_input(&mut args, &recipe);
+    let commands: Vec<SmCommand> = cmd::build_commands(args, payloads, recipe);
+    render::vspipe_render(commands);
 }

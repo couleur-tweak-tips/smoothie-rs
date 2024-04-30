@@ -1,9 +1,14 @@
-use crate::cli::Arguments;
-use crate::recipe::{export_recipe, Recipe, WidgetMetadata};
+use crate::{
+    cli::Arguments,
+    recipe::{export_recipe, Recipe, WidgetMetadata},
+};
+use std::{
+    fs::File, io::Write,
+    path::PathBuf,
+    sync::mpsc::Sender // used to retrieve SmCommands
+};
 use copypasta::{ClipboardContext, ClipboardProvider};
-use eframe::egui::{self};
-use std::path::PathBuf; // handling recipe file path
-use std::{fs::File, io::Write}; // saving recipe
+use eframe::egui;
 
 struct SmApp {
     recipe: Recipe,
@@ -17,6 +22,7 @@ struct SmApp {
     start_rendering: bool,
     // yeah that's the damn typename
     recipe_saved: String,
+    sender: Sender<(Recipe, Arguments)>
 }
 
 pub const WINDOW_NAME: &str = "smoothie-app";
@@ -69,10 +75,10 @@ pub fn sm_gui<'gui>(
     metadata: WidgetMetadata,
     recipe_filepath: String,
     args: Arguments,
+    sender: Sender<(Recipe, Arguments)>,
 ) -> Result<(), eframe::Error> {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
-    dbg!(&metadata);
-    let mut state: SmApp = SmApp {
+    let state: SmApp = SmApp {
         recipe_saved: format!("{:?}", recipe),
         recipe,
         metadata,
@@ -83,6 +89,7 @@ pub fn sm_gui<'gui>(
         recipe_filepath,
         args,
         start_rendering: false,
+        sender: sender,
     };
 
     let options = eframe::NativeOptions {
@@ -95,33 +102,38 @@ pub fn sm_gui<'gui>(
         ..Default::default()
     };
 
-    return eframe::run_simple_native("smoothie-app", options, move |ctx, _frame| {
+    eframe::run_native(
+        WINDOW_NAME,
+        options,
+        Box::new(|_|{Box::new(state)}),
+    )
+}
+
+impl eframe::App for SmApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            if state.start_rendering {
-                dbg!(&state.selected_files);
+            if self.start_rendering {
 
-                // state.gui_output_videos = Some(to_render.clone());
+                let mut scoped_args = self.args.clone();
+                scoped_args.input = self.selected_files.clone();
 
-                // egui makes some bitchass error if they're not copied, oh whatever
-                let mut scoped_args = state.args.clone();
-                scoped_args.input = state.selected_files.clone();
-                let scoped_recipe = state.recipe.clone();
+                let send_result = self.sender.send((self.recipe.clone(), scoped_args));
 
-                // literally main.rs
-                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
-                let payloads = crate::video::resolve_input(&mut scoped_args, &scoped_recipe);
-                let commands: Vec<crate::cmd::SmCommand> =
-                    crate::cmd::build_commands(state.args.clone(), payloads, scoped_recipe);
-                crate::render::vspipe_render(commands);
+                if let Err(e) = send_result {
+                    eprintln!("Retrieving filepaths from GUI panicked: {:?}", e);
+                }
 
-                state.selected_files.clear();
-                state.start_rendering = false;
+                self.selected_files.clear();
+                self.start_rendering = false;
+
+                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                ctx.request_repaint();
             }
 
             egui::menu::bar(ui, |ui| {
                 egui::widgets::global_dark_light_mode_switch(ui);
                 if ui.button("README").clicked() {
-                    state.show_about = true
+                    self.show_about = true
                 }
                 // ui.label(" | ");
                 let open_button = ui
@@ -131,7 +143,7 @@ pub fn sm_gui<'gui>(
                 if open_button
                     .clicked() || open_button.secondary_clicked()
                 {
-                    let to_open = PathBuf::from(state.recipe_filepath.clone()).display().to_string();
+                    let to_open = PathBuf::from(self.recipe_filepath.clone()).display().to_string();
                     dbg!(&to_open);
                     if open_button.secondary_clicked() {
                         let mut ctx = ClipboardContext::new().unwrap();
@@ -159,8 +171,8 @@ pub fn sm_gui<'gui>(
                     if let Some(input_vids) = input {
                         // used later in an if statement later down
                         if !input_vids.is_empty() {
-                            state.selected_files = input_vids;
-                            state.start_rendering = true;
+                            self.selected_files = input_vids;
+                            self.start_rendering = true;
                             // ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                         }
                     }
@@ -177,7 +189,7 @@ pub fn sm_gui<'gui>(
                     logical_key: egui::Key::S,
                 };
                 // if ui.button("hash").clicked() {
-                //     println!("{:?}", state.recipe);
+                //     println!("{:?}", self.recipe);
                 // }
 
                 // declare buttons and immediately handle if it's clicked OR if keyboard shortcut is "consumed" (pressed)
@@ -187,11 +199,11 @@ pub fn sm_gui<'gui>(
                     .clicked()
                     || ctx.input_mut(|i| i.consume_shortcut(&ctrl_s))
                 {
-                    state.recipe_saved = format!("{:?}", state.recipe);
+                    self.recipe_saved = format!("{:?}", self.recipe);
                     save_recipe(
-                        &state.recipe,
-                        &PathBuf::from(&state.recipe_filepath),
-                        &state.metadata,
+                        &self.recipe,
+                        &PathBuf::from(&self.recipe_filepath),
+                        &self.metadata,
                     );
                 }
                 if ui
@@ -204,9 +216,9 @@ pub fn sm_gui<'gui>(
                     .clicked()
                 {
                     let mut recipe_txt = if ui.input(|i| i.modifiers.ctrl) {
-                        export_recipe(state.recipe.clone(), &state.metadata.clone(), true, false, false)
+                        export_recipe(self.recipe.clone(), &self.metadata.clone(), true, false, false)
                     } else {
-                        export_recipe(state.recipe.clone(), &state.metadata.clone(), false, false, false)
+                        export_recipe(self.recipe.clone(), &self.metadata.clone(), false, false, false)
                     };
 
                     if ui.input(|i| i.modifiers.shift) {
@@ -218,7 +230,7 @@ pub fn sm_gui<'gui>(
                 }
             });
             egui::ScrollArea::vertical().show(ui, |ui| {
-                for cat in &mut state.metadata.keys() {
+                for cat in &mut self.metadata.keys() {
                     let mut first_run: bool = true;
                     let mut category_visibility: bool = true;
 
@@ -226,15 +238,15 @@ pub fn sm_gui<'gui>(
                     //     *flag = false;
                     // }
 
-                    if state.metadata.get(cat).unwrap().get("_sm_category").unwrap().get("display").unwrap() == &"no".to_string() {
+                    if self.metadata.get(cat).unwrap().get("_sm_category").unwrap().get("display").unwrap() == &"no".to_string() {
                         continue
                     }
 
-                    let sections = state.recipe.get_section_mut(cat);
+                    let sections = self.recipe.get_section_mut(cat);
 
                     for (key, value) in sections {
 
-                        if state.metadata.get(cat).unwrap().get(key).unwrap().get("display").unwrap() == &"no".to_string() {
+                        if self.metadata.get(cat).unwrap().get(key).unwrap().get("display").unwrap() == &"no".to_string() {
                             continue
                         }
                         if first_run {
@@ -279,7 +291,7 @@ pub fn sm_gui<'gui>(
                         if !category_visibility {
                             continue;
                         };
-                        let def_metadata = &mut state.metadata.get(cat).unwrap().get(key).unwrap();
+                        let def_metadata = &mut self.metadata.get(cat).unwrap().get(key).unwrap();
 
                         match def_metadata.get("type").unwrap().as_str() {
                             "enum" => {
@@ -398,7 +410,7 @@ pub fn sm_gui<'gui>(
                                         .to_str()
                                         .expect("Failed "),
                                 ) {
-                                    state.selected_files.push(path)
+                                    self.selected_files.push(path)
                                 } else {
                                     eprintln!("Skipping file with no extension:");
                                     dbg!(&path);
@@ -415,12 +427,12 @@ pub fn sm_gui<'gui>(
                 //     println!("you pressed ctrl+s");
                 // }
 
-                if !state.selected_files.is_empty() {
-                    state.start_rendering = true;
+                if !self.selected_files.is_empty() {
+                    self.start_rendering = true;
                 }
             });
 
-            if state.show_about {
+            if self.show_about {
                 egui::Window::new("about smoothie app")
                     .collapsible(false)
                     .resizable(false)
@@ -463,23 +475,23 @@ pub fn sm_gui<'gui>(
                         };
 
                         if ui.button("ok").clicked() {
-                            state.show_about = false;
+                            self.show_about = false;
                         }
                     });
             }
 
-            if ctx.input(|i| i.viewport().close_requested()) && !state.allowed_to_close {
+            if ctx.input(|i| i.viewport().close_requested()) && !self.allowed_to_close {
                 {
                     ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-                    state.show_confirmation_dialog = true;
+                    self.show_confirmation_dialog = true;
                 }
             }
-            if state.show_confirmation_dialog {
-                if format!("{:?}", state.recipe) != state.recipe_saved {
+            if self.show_confirmation_dialog {
+                if format!("{:?}", self.recipe) != self.recipe_saved {
                     // sorry, gotta do long ass title inline because rust ownership sucks
                     egui::Window::new(
                         "Do you want to save changes to ".to_owned()
-                            + PathBuf::from(state.recipe_filepath.clone())
+                            + PathBuf::from(self.recipe_filepath.clone())
                                 .file_name()
                                 .expect("Failed getting basename from recipe_filepath")
                                 .to_str()
@@ -492,32 +504,32 @@ pub fn sm_gui<'gui>(
                         ui.horizontal(|ui| {
                             if ui.button("Save").clicked() {
                                 save_recipe(
-                                    &state.recipe,
-                                    &PathBuf::from(&state.recipe_filepath),
-                                    &state.metadata,
+                                    &self.recipe,
+                                    &PathBuf::from(&self.recipe_filepath),
+                                    &self.metadata,
                                 );
-                                state.show_confirmation_dialog = false;
-                                state.allowed_to_close = true;
+                                self.show_confirmation_dialog = false;
+                                self.allowed_to_close = true;
                                 ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                             }
                             if ui.button("Don't Save").clicked() {
-                                state.show_confirmation_dialog = false;
-                                state.allowed_to_close = true;
+                                self.show_confirmation_dialog = false;
+                                self.allowed_to_close = true;
                                 ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                             }
                             if ui.button("Cancel").clicked() {
-                                state.show_confirmation_dialog = false;
+                                self.show_confirmation_dialog = false;
                             }
                         });
                     });
                 } else {
-                    state.show_confirmation_dialog = false;
-                    state.allowed_to_close = true;
+                    self.show_confirmation_dialog = false;
+                    self.allowed_to_close = true;
                     ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                 }
             }
         });
-    });
+    }
 }
 
 /// Preview hovering files:
