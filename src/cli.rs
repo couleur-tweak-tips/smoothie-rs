@@ -31,7 +31,7 @@ pub struct Arguments {
     pub outdir: Option<PathBuf>,
 
     /// Overrides output to an image of frame number passed
-    #[clap(long, conflicts_with = "encargs")]
+    #[clap(long)]
     pub peek: Option<u64>,
 
     /// Pass a .vpy script to evaluate nodes from
@@ -111,6 +111,7 @@ pub struct Arguments {
 
     /// Override FFmpeg encoding arguments (prefer using --override)
     #[clap(
+        alias = "enc-args",
         visible_alias = "enc",
         long,
         conflicts_with = "tompv",
@@ -127,7 +128,7 @@ pub struct Arguments {
     pub recipe_str: Option<String>,
 
     /// Override recipe setting(s), e.g: --ov "flowblur;amount;40" "misc;container;MKV"
-    #[clap(visible_alias="ov", visible_alias="overide", long, num_args=1..)]
+    #[clap(visible_alias="ov", alias="overide", long, num_args=1..)]
     pub r#override: Option<Vec<String>>,
 }
 
