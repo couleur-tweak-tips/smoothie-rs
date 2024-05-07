@@ -30,11 +30,9 @@ def normalize(weights: Iterable[Number]):
     """
 
     if min(weights) < 0 and not _wizardry_enabled:
-        abs_min = abs(min(weights))
-        weights = [w + abs_min + 1 for w in weights] # remove negative weights
+        weights = [w + abs(min(weights)) if w != 0 else 0 for w in weights] # remove negative weights
 
-    tot = sum(weights)
-    return [w / tot for w in weights]
+    return [w / sum(weights) for w in weights]
 
 
 def scale_range(n: int, start: Number, end: Number):
