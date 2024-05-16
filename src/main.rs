@@ -120,6 +120,7 @@ fn main() {
         }
 
         if let Ok((args, recipe, hwnd)) = receiver.recv() {
+            #[cfg(windows)]
             unsafe {
                 let _ret = windows::Win32::UI::WindowsAndMessaging::DestroyWindow(hwnd.unwrap());
                 // dbg!(&_ret);
