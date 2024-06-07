@@ -5,7 +5,6 @@ use color_eyre::owo_colors::OwoColorize;
 use colored::Colorize;
 use serde::Deserialize;
 use std::env;
-use std::env::current_exe;
 use std::time::Duration;
 use ureq::{Agent, Error as uReqError};
 
@@ -17,6 +16,7 @@ pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
     };
 
     let mut enc_arg_presets: Recipe = Recipe::new();
+    #[cfg(target_os = "windows")]
     parse_recipe(
         current_exe()
             .expect("Failed getting exe path")
@@ -25,6 +25,16 @@ pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
             .parent()
             .unwrap()
             .join("encoding_presets.ini"),
+        None,
+        &mut enc_arg_presets,
+        &mut None,
+        false,
+    );
+    #[cfg(not(target_os = "windows"))]
+    parse_recipe(
+        env::home_dir()
+            .expect("YOU DONT HAVE HOME DIR??????")
+            .join(".config/smoothie-rs/encoding_presets.ini"),
         None,
         &mut enc_arg_presets,
         &mut None,

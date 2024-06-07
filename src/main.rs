@@ -25,7 +25,7 @@ mod utils;
 mod video;
 
 use crate::{cli::Arguments, cmd::SmCommand, video::Payload};
-use std::{env, sync::mpsc::channel};
+use std::{sync::mpsc::channel};
 use utils::verbosity_init;
 
 const VIDEO_EXTENSIONS: &[&str] = &[
@@ -94,7 +94,7 @@ fn main() {
         };
 
         let env_var = std::env::var("SM_NOWINDOWINTERACT");
-        let interact: bool = env_var.is_ok() && env_var.unwrap() == "1".to_owned();
+        let _interact: bool = env_var.is_ok() && env_var.unwrap() == "1".to_owned();
 
         #[cfg(windows)]
         if interact {
@@ -119,7 +119,7 @@ fn main() {
             }
         }
 
-        if let Ok((args, recipe, hwnd)) = receiver.recv() {
+        if let Ok((args, recipe, _hwnd)) = receiver.recv() {
             #[cfg(windows)]
             unsafe {
                 let _ret = windows::Win32::UI::WindowsAndMessaging::DestroyWindow(hwnd.unwrap());

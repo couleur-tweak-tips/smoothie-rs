@@ -177,6 +177,11 @@ If you'd like help, take a screenshot of this message and your recipe and come o
         Some(arg) => arg,
         None => "".to_string(),
     };
+    // Fix scoping issues
+    let _ini_path: PathBuf;
+    let home_dir: PathBuf;
+    let mut config_path: PathBuf = Default::default();
+    let mut local_path: PathBuf = Default::default();
 
     let current_exe = env::current_exe().expect("Could not determine exe");
     let current_exe_path = current_exe
@@ -186,18 +191,39 @@ If you'd like help, take a screenshot of this message and your recipe and come o
     let current_exe_path_dir = current_exe_path
         .parent()
         .expect("Could not get directory of directory's executable??");
+    
 
+    // Linux stuff
+    #[cfg(not(target_os = "windows"))] {
+        home_dir = env::home_dir().expect("How do you not have a user dir?");
+        config_path = home_dir.join(".config/smoothie-rs");
+        if !config_path.exists() {
+            panic!("expected folder @ {}", config_path.display());
+        }
+        local_path = home_dir.join(".local/share");
+        local_path.push("smoothie-rs");
+        if !local_path.exists() {
+            panic!("expected folder @ {}", local_path.display());
+        }
+    
+    }
+    #[cfg(target_os = "windows")]
     let mut last_args = current_exe_path_dir.join("last_args.txt");
+
+    #[cfg(not(target_os = "windows"))]
+    let mut last_args = local_path.join("last_args.txt");
+
     if !last_args.exists() {
         if File::create(&last_args).is_err() {
-            panic!("Failed to create last_args.txt at {current_exe_path_dir:?}")
+            panic!("Failed to create last_args.txt at {}\nlocal_path: {}", last_args.display(), local_path.display())
         };
     }
 
     match first_arg.as_ref() {
         "enc" | "encoding" | "presets" | "encpresets" | "macros" => {
-            let presets_path = current_exe_path.join("..").join("encoding_presets.ini");
-
+            let _presets_path = current_exe_path.join("..").join("encoding_presets.ini");
+            #[cfg(not(target_os = "windows"))]
+            let presets_path = config_path.join("encoding_presets.ini");
             if !presets_path.exists() {
                 panic!(
                     "Could not find encoding presets (expected at {})",
@@ -239,8 +265,10 @@ If you'd like help, take a screenshot of this message and your recipe and come o
             }
         }
         "rc" | "recipe" | "conf" | "config" => {
-            let ini_path = current_exe_path.join("..").join("recipe.ini");
-
+            #[cfg(target_os = "windows")]
+            let _ini_path = current_exe_path.join("..").join("recipe.ini");
+            #[cfg(not(target_os = "windows"))]
+            let ini_path = config_path.join("recipe.ini");
             if !ini_path.exists() {
                 panic!("Could not find recipe at {}", ini_path.display())
             }
