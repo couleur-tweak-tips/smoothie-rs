@@ -35,7 +35,14 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
                 .display()
                 .to_string()
         } else {
-            ff_path
+            let is_ffmpeg: bool = ff_path.ends_with("ffmpeg") || ff_path.ends_with("ffmpeg.exe");
+            let r#override: bool = env::var("SM_ALLOW_MISC_OUTPUT") == Ok("1".to_owned());
+
+            if !is_ffmpeg && !r#override {
+                panic!("You specified an output process which does not have the filename 'ffmpeg', to override this error message please set the environment variable SM_ALLOW_MISC_OUTPUT to 1");
+            } else {
+                ff_path
+            }
         }
     };
 
