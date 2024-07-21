@@ -178,7 +178,7 @@ If you'd like help, take a screenshot of this message and your recipe and come o
         None => "".to_string(),
     };
     // Fix scoping issues
-    let _ini_path: PathBuf;
+    let ini_path: PathBuf;
     let home_dir: PathBuf;
     let mut config_path: PathBuf = Default::default();
     let mut local_path: PathBuf = Default::default();
@@ -215,13 +215,14 @@ If you'd like help, take a screenshot of this message and your recipe and come o
 
     if !last_args.exists() {
         if File::create(&last_args).is_err() {
-            panic!("Failed to create last_args.txt at {}\nlocal_path: {}", last_args.display(), local_path.display())
+            panic!("Failed to create last_args.txt at {last_args:?}")
         };
     }
 
     match first_arg.as_ref() {
         "enc" | "encoding" | "presets" | "encpresets" | "macros" => {
-            let _presets_path = current_exe_path.join("..").join("encoding_presets.ini");
+            #[cfg(target_os = "windows")]
+            let presets_path = current_exe_path.join("..").join("encoding_presets.ini");
             #[cfg(not(target_os = "windows"))]
             let presets_path = config_path.join("encoding_presets.ini");
             if !presets_path.exists() {
@@ -266,7 +267,7 @@ If you'd like help, take a screenshot of this message and your recipe and come o
         }
         "rc" | "recipe" | "conf" | "config" => {
             #[cfg(target_os = "windows")]
-            let _ini_path = current_exe_path.join("..").join("recipe.ini");
+            let ini_path = current_exe_path.join("..").join("recipe.ini");
             #[cfg(not(target_os = "windows"))]
             let ini_path = config_path.join("recipe.ini");
             if !ini_path.exists() {
