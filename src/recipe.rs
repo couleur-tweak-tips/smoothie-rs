@@ -394,10 +394,36 @@ pub fn get_recipe(args: &mut Arguments) -> (Recipe, WidgetMetadata) {
         None => panic!("Could not resolve Smoothie's binary directory `{exe:?}`"),
     };
 
+    let home_dir: PathBuf;
+    let config_path: PathBuf = Default::default();
+    let local_path: PathBuf = Default::default();
+    let cur_dir_sc: PathBuf = Default::default();
+
+    let mut config_path: PathBuf = Default::default();
+    let mut local_path: PathBuf = Default::default();
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        home_dir = env::home_dir().expect("How do you not have a user dir?");
+        config_path = home_dir.join(".config/smoothie-rs");
+        if !config_path.exists() {
+            panic!("ERROR: expected folder not found @ {}", config_path.display());
+        }
+
+        local_path = home_dir.join(".local/share/smoothie-rs");
+        if !local_path.exists() {
+            panic!("ERROR: expected folder not found @ {}", local_path.display());
+        }
+    }
+
     let rc_path = if PathBuf::from(&args.recipe).exists() {
         PathBuf::from(&args.recipe)
     } else {
-        let cur_dir_rc = bin_dir.join(&args.recipe);
+        let cur_dir_rc = if cfg!(target_os = "windows") {
+            bin_dir.join(&args.recipe)
+        } else {
+            config_path.join(&args.recipe)
+        };
         if !cur_dir_rc.exists() {
             panic!(
                 "Recipe filepath does not exist (expected at {})",
