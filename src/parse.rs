@@ -5,6 +5,7 @@ use color_eyre::owo_colors::OwoColorize;
 use colored::Colorize;
 use serde::Deserialize;
 use std::env;
+use std::env::current_exe;
 use std::time::Duration;
 use ureq::{Agent, Error as uReqError};
 
