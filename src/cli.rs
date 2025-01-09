@@ -1,7 +1,10 @@
 use clap::Parser;
 use std::fs::File;
+use std::fs;
 use std::io::{Read, Write};
 use std::{env, path::PathBuf, process::Command};
+use crate::portable;
+use homedir;
 
 /// Smoothen up your gameplay footage with Smoothie, yum!
 #[derive(Parser, Debug, Clone)]
@@ -193,25 +196,7 @@ If you'd like help, take a screenshot of this message and your recipe and come o
         .expect("Could not get directory of directory's executable??");
     
 
-    // Linux stuff
-    #[cfg(not(target_os = "windows"))] {
-        home_dir = env::home_dir().expect("How do you not have a user dir?");
-        config_path = home_dir.join(".config/smoothie-rs");
-        if !config_path.exists() {
-            panic!("expected folder @ {}", config_path.display());
-        }
-        local_path = home_dir.join(".local/share");
-        local_path.push("smoothie-rs");
-        if !local_path.exists() {
-            panic!("expected folder @ {}", local_path.display());
-        }
-    
-    }
-    #[cfg(target_os = "windows")]
-    let mut last_args = current_exe_path_dir.join("last_args.txt");
-
-    #[cfg(not(target_os = "windows"))]
-    let mut last_args = local_path.join("last_args.txt");
+    let mut last_args = portable::get_last_args_path();
 
     if !last_args.exists() {
         if File::create(&last_args).is_err() {
@@ -221,10 +206,7 @@ If you'd like help, take a screenshot of this message and your recipe and come o
 
     match first_arg.as_ref() {
         "enc" | "encoding" | "presets" | "encpresets" | "macros" => {
-            #[cfg(target_os = "windows")]
-            let presets_path = current_exe_path.join("..").join("encoding_presets.ini");
-            #[cfg(not(target_os = "windows"))]
-            let presets_path = config_path.join("encoding_presets.ini");
+            let presets_path = portable::get_encoding_presets_path();
             if !presets_path.exists() {
                 panic!(
                     "Could not find encoding presets (expected at {})",
@@ -244,7 +226,7 @@ If you'd like help, take a screenshot of this message and your recipe and come o
             }
         }
         "def" | "default" | "defaults" => {
-            let presets_path = current_exe_path.join("..").join("defaults.ini");
+            let presets_path = portable::get_defaults_path();
 
             if !presets_path.exists() {
                 panic!(
@@ -266,10 +248,7 @@ If you'd like help, take a screenshot of this message and your recipe and come o
             }
         }
         "rc" | "recipe" | "conf" | "config" => {
-            #[cfg(target_os = "windows")]
-            let ini_path = current_exe_path.join("..").join("recipe.ini");
-            #[cfg(not(target_os = "windows"))]
-            let ini_path = config_path.join("recipe.ini");
+            let ini_path = portable::get_recipe_path();
             if !ini_path.exists() {
                 panic!("Could not find recipe at {}", ini_path.display())
             }
