@@ -8,7 +8,7 @@ use indexmap::map::Keys;
 use std::env;
 use std::fs::File;
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct Recipe {
@@ -385,16 +385,6 @@ pub fn export_recipe(
 }
 
 pub fn get_recipe(args: &mut Arguments) -> (Recipe, WidgetMetadata) {
-    let exe = match env::current_exe() {
-        Ok(exe) => exe,
-        Err(e) => panic!("Could not resolve Smoothie's binary path: {}", e),
-    };
-
-    let bin_dir = match exe.parent() {
-        Some(bin_dir) => bin_dir.parent().unwrap(),
-        None => panic!("Could not resolve Smoothie's binary directory `{exe:?}`"),
-    };
-
     let rc_path = if PathBuf::from(&args.recipe).exists() {
         PathBuf::from(&args.recipe)
     } else {
@@ -413,7 +403,7 @@ pub fn get_recipe(args: &mut Arguments) -> (Recipe, WidgetMetadata) {
     let mut metadata = Some(WidgetMetadata::new());
 
     parse_recipe(
-        Path::join(bin_dir, "defaults.ini"),
+        portable::get_defaults_path(),
         None,
         &mut rc,
         &mut metadata,
