@@ -3,6 +3,8 @@ use homedir;
 
 const DEFAULT_RECIPE: &str = include_str!("../target/recipe.ini");
 const DEFAULT_ENCODING_PRESETS: &str = include_str!("../target/encoding_presets.ini");
+const DEFAULT_FLOWNET_BIN: &'static [u8] = include_bytes!("../target/models/rife-v4.6/flownet.bin");
+const DEFAULT_FLOWNET_PARAM: &str = include_str!("../target/models/rife-v4.6/flownet.param");
 
 fn get_target_path() -> PathBuf {
     let current_exe = env::current_exe().expect("Could not determine exe");
@@ -33,8 +35,27 @@ pub fn get_config_path() -> PathBuf {
                 .expect("Failed to create config folder");
         }
     } 
-
+    
     return config_path;
+}
+
+pub fn get_local_path() -> PathBuf {
+    let local_path: PathBuf;
+    
+    if cfg!(target_os = "windows") || is_portable() {
+        local_path = get_target_path();
+    } else {
+        let home_dir = homedir::my_home()
+            .unwrap()
+            .expect("How do you not have a user dir?");
+        local_path = home_dir.join(".local/share/smoothie-rs");
+        if !local_path.exists() {
+            fs::create_dir_all(&local_path)
+                .expect("Failed to create local folder");
+        }
+    }
+
+    return local_path;
 }
 
 pub fn get_recipe_path() -> PathBuf {
@@ -42,6 +63,7 @@ pub fn get_recipe_path() -> PathBuf {
     if !recipe_path.exists() {
         fs::write(&recipe_path, DEFAULT_RECIPE).unwrap();
     }
+    println!("recipe path: {}", recipe_path.display());
     return recipe_path;
 }
 
@@ -55,6 +77,19 @@ pub fn get_encoding_presets_path() -> PathBuf {
 
 pub fn get_defaults_path() -> PathBuf {
     return get_target_path().join("defaults.ini");
+}
+
+pub fn get_default_model_path() -> PathBuf {
+    let model_path = get_local_path().join("models/rife-v4.6");
+    if !model_path.exists() {
+        fs::create_dir_all(&model_path).unwrap();
+        fs::write(model_path.join("flownet.bin"), DEFAULT_FLOWNET_BIN).unwrap();
+        fs::write(model_path.join("flownet.param"), DEFAULT_FLOWNET_PARAM).unwrap();
+    } else if !model_path.join("flownet.bin").exists() || !model_path.join("flownet.param").exists() {
+        fs::write(model_path.join("flownet.bin"), DEFAULT_FLOWNET_BIN).unwrap();
+        fs::write(model_path.join("flownet.param"), DEFAULT_FLOWNET_PARAM).unwrap();
+    }
+    return model_path;
 }
 
 pub fn get_last_args_path() -> PathBuf {

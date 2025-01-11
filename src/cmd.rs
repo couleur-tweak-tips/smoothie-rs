@@ -3,6 +3,7 @@ use which::which;
 
 use crate::cli::Arguments;
 use crate::parse::parse_encoding_args;
+use crate::portable;
 use crate::recipe::Recipe;
 use crate::video::Payload;
 
@@ -118,6 +119,9 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
         vpy_path.display().to_string(),
         "--arg".to_owned(),
         format!("recipe={rc_string:?}"),
+        "--arg".to_owned(),
+        format!("default_model_path={}", portable::get_default_model_path()
+            .display()),
     ];
 
     let mut ret: Vec<SmCommand> = vec![];
