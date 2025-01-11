@@ -37,8 +37,13 @@ pub fn get_config_path() -> PathBuf {
     return config_path;
 }
 
+pub fn get_recipe_path_custom(recipe_name : &str) -> PathBuf {
+    let recipe_path = get_config_path().join(recipe_name);
+    return recipe_path;
+}
+
 pub fn get_recipe_path() -> PathBuf {
-    let recipe_path = get_config_path().join("recipe.ini");
+    let recipe_path = get_recipe_path_custom("recipe.ini");
     if !recipe_path.exists() {
         fs::write(&recipe_path, DEFAULT_RECIPE).unwrap();
     }

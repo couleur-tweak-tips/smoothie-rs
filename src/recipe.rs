@@ -398,7 +398,7 @@ pub fn get_recipe(args: &mut Arguments) -> (Recipe, WidgetMetadata) {
     let rc_path = if PathBuf::from(&args.recipe).exists() {
         PathBuf::from(&args.recipe)
     } else {
-        let cur_dir_rc = portable::get_recipe_path();
+        let cur_dir_rc = portable::get_recipe_path_custom(&args.recipe);
         if !cur_dir_rc.exists() {
             panic!(
                 "Recipe filepath does not exist (expected at {})",
