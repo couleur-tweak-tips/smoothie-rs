@@ -1,10 +1,10 @@
+use crate::portable;
 use clap::Parser;
-use std::fs::File;
+use homedir;
 use std::fs;
+use std::fs::File;
 use std::io::{Read, Write};
 use std::{env, path::PathBuf, process::Command};
-use crate::portable;
-use homedir;
 
 /// Smoothen up your gameplay footage with Smoothie, yum!
 #[derive(Parser, Debug, Clone)]
@@ -194,7 +194,6 @@ If you'd like help, take a screenshot of this message and your recipe and come o
     let current_exe_path_dir = current_exe_path
         .parent()
         .expect("Could not get directory of directory's executable??");
-    
 
     let mut last_args = portable::get_last_args_path();
 
@@ -216,8 +215,8 @@ If you'd like help, take a screenshot of this message and your recipe and come o
 
             let ini_path = presets_path.canonicalize().unwrap().display().to_string();
 
-            match opener::open(&ini_path){
-                Ok(()) =>{
+            match opener::open(&ini_path) {
+                Ok(()) => {
                     std::process::exit(0);
                 }
                 Err(e) => {
@@ -237,9 +236,8 @@ If you'd like help, take a screenshot of this message and your recipe and come o
 
             let ini_path = presets_path.canonicalize().unwrap().display().to_string();
 
-            
-            match opener::open(&ini_path){
-                Ok(()) =>{
+            match opener::open(&ini_path) {
+                Ok(()) => {
                     std::process::exit(0);
                 }
                 Err(e) => {
@@ -255,14 +253,14 @@ If you'd like help, take a screenshot of this message and your recipe and come o
 
             let ini_path = ini_path.canonicalize().unwrap().display().to_string();
 
-            match opener::open(&ini_path){
-                Ok(()) =>{
+            match opener::open(&ini_path) {
+                Ok(()) => {
                     std::process::exit(0);
                 }
                 Err(e) => {
                     panic!("Error {e}\n\nFailed opening file {:?}", ini_path);
                 }
-            }   
+            }
         }
         "root" | "dir" | "folder" => {
             if cfg!(target_os = "windows") {
