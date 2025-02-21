@@ -46,7 +46,7 @@ jobs:
 #          smoothie-rs-artifact/bin/smoothie*.exe
 #          smoothie-rs-artifact/bin/vapoursynth64/plugins/*.dll
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: smoothie-rs-bin-windows
         path: ./smoothie-rs/
