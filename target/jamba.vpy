@@ -61,30 +61,42 @@ else:
 
     verb(f"cache_file: {cache_file}")
 
-    clip: vs.VideoNode = core.ffms2.Source(
-        source=input_video,
-        cachefile=cache_file,
-    )
+    sp = rc['miscellaneous']['source plugin']
 
-    #clip: vs.VideoNode = core.lsmas.LWLibavSource(
-    #    # * Docs and plugin came from https://github.com/AkarinVS/L-SMASH-Works/tree/master/VapourSynth
-    #
-    #    source=input_video.replace("\\\\?\\", "").strip('"'),
-    #    # \\?\ caused by Rust's .canonicalize(), not supported by lsmas
-    #
-    #    cache=int(rc['miscellaneous']['source indexing'].lower() in YES),
-    #    # Smoothie comes bundled with the cachedir-tmp variant of this plugin
-    #    # * Create the index file (.lwi) to the same directory as the source file if set to 1.
-    #    # * The index file avoids parsing all frames in the source file at the next or later access.
-    #    # * Parsing all frames is very important for frame accurate seek.
-    #
-    #    prefer_hw=3
-    #    # * 0: Use default software decoder.
-    #    # * 1: Use NVIDIA CUVID acceleration for supported codec, otherwise use default software decoder.
-    #    # * 2: Use Intel Quick Sync Video acceleration for supported codec, otherwise use default software decoder.
-    #    # * 3: Try hardware decoder in the order of CUVID->QSV. If none is available then use default software decoder.
-    #
-    #)
+    if sp in ['ffms','ffms2', 'ffms 2']:
+        clip: vs.VideoNode = core.ffms2.Source(
+            source=input_video,
+            cachefile=cache_file
+        )
+    elif sp in ['bs','bestsource', 'best source', 'best-source', 'best_source']:
+        clip = core.bs.VideoSource(input_video, hwdevice="d3d11va")
+    elif sp in ['lsmas','lsmash', 'lwsmashsource', 'smash', 'l-smash', 'l-smash-works', 'lsmashworks']:
+  
+      clip: vs.VideoNode = core.lsmas.LWLibavSource(
+         # * Docs and plugin came from https://github.com/AkarinVS/L-SMASH-Works/tree/master/VapourSynth
+    
+         source=input_video.replace("\\\\?\\", "").strip('"'),
+         # \\?\ caused by Rust's .canonicalize(), not supported by lsmas
+    
+         cache=int(rc['miscellaneous']['source indexing'].lower() in YES),
+         # Smoothie comes bundled with the cachedir-tmp variant of this plugin
+         # * Create the index file (.lwi) to the same directory as the source file if set to 1.
+         # * The index file avoids parsing all frames in the source file at the next or later access.
+         # * Parsing all frames is very important for frame accurate seek.
+     
+         prefer_hw=3
+         # * 0: Use default software decoder.
+         # * 1: Use NVIDIA CUVID acceleration for supported codec, otherwise use default software decoder.
+         # * 2: Use Intel Quick Sync Video acceleration for supported codec, otherwise use default software decoder.
+         # * 3: Try hardware decoder in the order of CUVID->QSV. If none is available then use default software decoder.
+    
+      )
+    else:
+        eprint(f"unknown source plugin `{sp}`, defaulting to ffms2")
+        clip: vs.VideoNode = core.ffms2.Source(
+            source=input_video,
+            cachefile=cache_file
+        )
 # source plugin
 
 # this is for fps comparisons
