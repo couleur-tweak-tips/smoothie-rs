@@ -1,6 +1,7 @@
 use crate::cli::Arguments;
 use crate::verb;
 use crate::{NO, YES};
+use crate::portable;
 use indexmap::map::Entry;
 use indexmap::map::IndexMap;
 use indexmap::map::Keys;
@@ -397,7 +398,7 @@ pub fn get_recipe(args: &mut Arguments) -> (Recipe, WidgetMetadata) {
     let rc_path = if PathBuf::from(&args.recipe).exists() {
         PathBuf::from(&args.recipe)
     } else {
-        let cur_dir_rc = bin_dir.join(&args.recipe);
+        let cur_dir_rc = portable::get_recipe_path_custom(&args.recipe);
         if !cur_dir_rc.exists() {
             panic!(
                 "Recipe filepath does not exist (expected at {})",

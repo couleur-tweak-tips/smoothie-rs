@@ -1,11 +1,11 @@
 use crate::cli::Arguments;
+use crate::portable;
 use crate::recipe::{parse_recipe, Recipe};
 use crate::verb;
 use color_eyre::owo_colors::OwoColorize;
 use colored::Colorize;
 use serde::Deserialize;
 use std::env;
-use std::env::current_exe;
 use std::time::Duration;
 use ureq::{Agent, Error as uReqError};
 
@@ -18,19 +18,12 @@ pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
 
     let mut enc_arg_presets: Recipe = Recipe::new();
     parse_recipe(
-        current_exe()
-            .expect("Failed getting exe path")
-            .parent()
-            .expect("Failed getting exe parent path")
-            .parent()
-            .unwrap()
-            .join("encoding_presets.ini"),
+        portable::get_encoding_presets_path(),
         None,
         &mut enc_arg_presets,
         &mut None,
         false,
     );
-    // dbg!(&enc_arg_presets);
 
     let mut codec = String::new(); // e.g H264, H265
     let mut ret = String::new();
