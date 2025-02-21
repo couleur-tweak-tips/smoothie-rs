@@ -326,11 +326,11 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
         factor_num=(pi['factor']).strip('x'),
         # multiplier=str(pi['factor']).strip('x'),
         model_path=model_path,
-        gpu_id=0,
-        gpu_thread=1,
-        tta=False,
-        uhd=False,  # tune for 1440p+ content
-        sc=False  # scene change
+        gpu_id=(pi['gpu id']),
+        gpu_thread=(pi['gpu thread']),
+        tta=(pi['test-time augmentation']).lower() in YES,
+        uhd=(pi['uhd']).lower() in YES,  # tune for 1440p+ content
+        sc=(pi['scene change']).lower() in YES  # scene change
     )
 
     if pi['masking'] in YES:
