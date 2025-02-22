@@ -21,6 +21,9 @@ jobs:
       with:
         submodules: recursive
 
+    - run: cache rust stuffs
+    - uses: Swatinem/rust-cache@v2
+
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable

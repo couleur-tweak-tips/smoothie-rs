@@ -1,12 +1,13 @@
 use crate::{cli::Arguments, recipe::Recipe};
 use color_eyre::owo_colors::OwoColorize;
 use ffprobe::FfProbe;
-use rand::seq::SliceRandom;
+use rand::seq::IndexedRandom;
 use rfd::FileDialog;
 use std::{collections::HashMap, fs, path::PathBuf};
 use which::which;
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct Payload {
     pub in_path: PathBuf,  // D:\obs stuff\video.mp4
     pub out_path: PathBuf, // D:\obs stuff\video ~ Mango.mp4
@@ -137,7 +138,7 @@ pub fn resolve_outpath(
             &format!(
                 " {}",
                 fruits
-                    .choose(&mut rand::thread_rng())
+                    .choose(&mut rand::rng())
                     .expect("Failed to select a random suffix")
             ),
         );

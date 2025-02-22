@@ -1,7 +1,5 @@
 use crate::portable;
 use clap::Parser;
-use homedir;
-use std::fs;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::{env, path::PathBuf, process::Command};
@@ -180,20 +178,11 @@ If you'd like help, take a screenshot of this message and your recipe and come o
         Some(arg) => arg,
         None => "".to_string(),
     };
-    // Fix scoping issues
-    let ini_path: PathBuf;
-    let home_dir: PathBuf;
-    let mut config_path: PathBuf = Default::default();
-    let mut local_path: PathBuf = Default::default();
 
     let current_exe = env::current_exe().expect("Could not determine exe");
     let current_exe_path = current_exe
         .parent()
         .expect("Could not get directory of executable");
-
-    let current_exe_path_dir = current_exe_path
-        .parent()
-        .expect("Could not get directory of directory's executable??");
 
     let mut last_args = portable::get_last_args_path();
 

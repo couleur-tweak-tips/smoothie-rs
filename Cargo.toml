@@ -10,16 +10,16 @@ clap = {version = "4.1.4 ", features = ["derive"] } # cli arg helper
 color-eyre = "0.6.2" # error handling
 ffprobe = "0.4.0"
 opener = "0.7.0"  # open file with default app
-rand = "0.8.5"  # randomly choose from fruits for suffix
-rfd = "0.14.1"  # open file dialog
-which = "6.0.1" # Get-Command / where.exe / which alternative
+rand = "0.9.0"  # randomly choose from fruits for suffix
+rfd = "0.15.2"  # open file dialog
+which = "7.0.2" # Get-Command / where.exe / which alternative
 
 # json stuff
 serde = "1.0.152" 
 serde_derive = "1.0.152"
 serde_json = "1.0.91"
 
-colored = "2.0.0"
+colored = "3.0.0"
 enable-ansi-support = "0.2.1"
 num-rational = "0.4.1"
 anyhow = "1.0.69"
@@ -31,14 +31,14 @@ regex = "1.7.2"
 indexmap = { version = "2.2.6", features = ["serde"] }
 
 # gui-related
-eframe = "0.27.2" # egui 'frame'work
+eframe = "0.31.0" # egui 'frame'work
 env_logger = "0.11.3"
 winit = "0.30.0" # load icon
 image = "0.25.1" # load icon
 copypasta = "0.10.1" # copy to clipboard
 
 winapi = { version = "0.3.9", features = ["wincon"] }
-windows = { version = "0.56.0", features = ["Win32", "Win32_UI", "Win32_UI_WindowsAndMessaging"]}
+windows = { version = "0.60.0", features = ["Win32", "Win32_UI", "Win32_UI_WindowsAndMessaging"]}
 homedir = "0.3.4"
 
 [build-dependencies]

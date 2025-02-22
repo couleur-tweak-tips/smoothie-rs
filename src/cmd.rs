@@ -10,6 +10,7 @@ use crate::verb;
 use std::env;
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct SmCommand {
     pub vs_path: String,
     pub vs_args: Vec<String>,
