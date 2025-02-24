@@ -138,7 +138,16 @@ fn main() {
         (recipe, args)
     };
 
+    let return_recipe = args.return_recipe;
+
     payloads = video::resolve_input(&mut args, &recipe);
     let commands: Vec<SmCommand> = cmd::build_commands(args, payloads, recipe);
-    vspipe_render(commands);
+    if return_recipe {
+        for command in commands {
+            println!("recipe={}", (format!("{:?}", &command.recipe)).replace("Recipe { data: {", "{ \"data\": {"))
+        }
+
+    } else {
+        vspipe_render(commands);
+    }
 }

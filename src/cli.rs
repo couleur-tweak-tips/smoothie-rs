@@ -68,6 +68,10 @@ pub struct Arguments {
     )]
     pub tompv: bool,
 
+    /// return recipe string, formatted for jamba.vpy
+    #[clap(long)]
+    pub return_recipe: bool,
+
     // external script/extensions
     /// Payload containing video timecodes, used by NLE scripts
     #[clap(long, conflicts_with = "input")]
@@ -121,11 +125,16 @@ pub struct Arguments {
     pub encargs: Option<String>,
 
     /// Specify a recipe path
-    #[clap(short, long, default_value = "recipe.ini")]
+    #[clap(
+        short,
+        long,
+        default_value = "recipe.ini",
+        conflicts_with = "recipe_str"
+    )]
     pub recipe: String,
 
     /// Specify a recipe string
-    #[clap(long)]
+    #[clap(long, conflicts_with = "recipe")]
     pub recipe_str: Option<String>,
 
     /// Override recipe setting(s), e.g: --ov "flowblur;amount;40" "misc;container;MKV"
