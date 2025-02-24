@@ -177,14 +177,63 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
             } else if args.stripaudio {
                 cur_cmd_arguments.append(&mut enc_args.clone());
             } else {
-                cur_cmd_arguments.append(&mut vec![
-                    "-i".to_owned(),
-                    format!("{}", payload.in_path.display().to_string()),
-                    "-map".to_owned(),
-                    "0:v".to_owned(),
-                    "-map".to_owned(),
-                    "1:a?".to_owned(),
-                ]);
+                let mut audio_tracks = 0;
+                for stream in &payload.probe.streams {
+                    if stream.codec_type == Some("audio".to_owned()) {
+                        audio_tracks += 1;
+                    }
+                }
+                let timecodes = recipe.get_option("runtime", "timecodes");
+
+                if audio_tracks > 0 && timecodes.is_some() && timecodes != Some("".to_string()) {
+                    let timecodes = timecodes.unwrap();
+                    let mut filter_complex = String::new();
+
+                    for track_number in 0..audio_tracks {
+                        let mut merge = String::new();
+                        let mut iter = 1;
+                        for timecode in timecodes.split(";") {
+                            let (start, end) = timecode
+                                .split_once("-")
+                                .expect("runtine timecode split failed");
+
+                            filter_complex.push_str(format!("[1:a:{track_number}]atrim=start={start}:end={end},asetpts=PTS-STARTPTS[a{iter}{track_number}];").as_str());
+                            merge.push_str(format!("[a{iter}{track_number}]").as_str());
+                            iter += 1;
+                        }
+                        iter -= 1;
+                        filter_complex.push_str(merge.as_str());
+                        filter_complex.push_str(
+                            format!("concat=n={iter}:v=0:a=1[outa{track_number}];").as_str(),
+                        );
+                    }
+
+                    cur_cmd_arguments.append(&mut vec![
+                        "-i".to_owned(),
+                        format!("{}", payload.in_path.display().to_string()),
+                        "-filter_complex".to_owned(),
+                        filter_complex,
+                        "-map".to_owned(),
+                        "0:v".to_owned(),
+                    ]);
+
+                    for track_number in 0..audio_tracks {
+                        cur_cmd_arguments.append(&mut vec![
+                            "-map".to_owned(),
+                            format!("[outa{track_number}]").to_owned(),
+                        ]);
+                    }
+
+                } else {
+                    cur_cmd_arguments.append(&mut vec![
+                        "-i".to_owned(),
+                        format!("{}", payload.in_path.display().to_string()),
+                        "-map".to_owned(),
+                        "0:v".to_owned(),
+                        "-map".to_owned(),
+                        "1:a?".to_owned(),
+                    ]);
+                }
             }
             cur_cmd_arguments.append(&mut enc_args.clone());
             cur_cmd_arguments.push(payload.out_path.display().to_string());
