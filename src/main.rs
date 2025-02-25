@@ -15,7 +15,7 @@ use winapi::um::{
 mod cli;
 mod cmd;
 mod smgui;
-// mod ffpb;
+mod ffpb;
 // mod ffpb2;
 mod parse;
 mod portable;
@@ -139,6 +139,7 @@ fn main() {
     };
 
     let return_recipe = args.return_recipe;
+    let progress = args.progress;
 
     payloads = video::resolve_input(&mut args, &recipe);
     let commands: Vec<SmCommand> = cmd::build_commands(args, payloads, recipe);
@@ -148,6 +149,6 @@ fn main() {
         }
 
     } else {
-        vspipe_render(commands);
+        vspipe_render(commands, progress);
     }
 }

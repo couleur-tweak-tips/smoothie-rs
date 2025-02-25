@@ -102,6 +102,10 @@ pub struct Arguments {
     pub padding: bool,
 
     // debugging
+    /// Display progress bar
+    #[clap(long, default_value_t = false)]
+    pub progress: bool,
+
     /// Display details about recipe, what I personally use
     #[clap(short, long, default_value_t = false)]
     pub verbose: bool,
