@@ -158,7 +158,7 @@ impl eframe::App for SmApp {
                 ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
             }
             egui::menu::bar(ui, |ui| {
-                egui::widgets::global_dark_light_mode_switch(ui);
+                egui::widgets::global_theme_preference_switch(ui);
                 if ui.button("README").clicked() {
                     self.show_about = true
                 }
