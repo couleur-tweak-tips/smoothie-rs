@@ -23,8 +23,9 @@ from scripts import adjust
 from scripts import filldrops
 from scripts.consts import YES, NO
 
-if recipe := environ.get("SM_RECIPE"):
-    pass
+if environ.get("SM_RECIPE") not in [None, ""]:
+    print("USING MPV-PURPOSED SM_RECIPE ENV VAR")
+    recipe = environ.get("SM_RECIPE").replace('recipe=', '', 1)
 
 
 for var in ['input_video', 'recipe']:
@@ -35,10 +36,20 @@ for var in ['input_video', 'recipe']:
         raise NameError(
             "You need to pass in both input_video and recipe variables via VSPipe's --arg"
         )
+    
+    
+if 'input_video' in vars() and type(input_video) is bytes:
+    input_video = input_video.decode("utf-8")
+    if type(recipe) is bytes:
+        recipe = recipe.decode("utf-8")
 
 try:  # I have no clue why it returns a str the first time, that works though :shrug:
     recipe = json.loads(recipe)
-    rc = json.loads(recipe)['data']
+    # rc = json.loads(recipe)['data']
+    if type(recipe) is str:
+        rc = json.loads(recipe)['data']
+    else:
+        rc = (recipe)['data']
 
 except json.decoder.JSONDecodeError:
     print(f"\n\nRecipe: {recipe}\n")
