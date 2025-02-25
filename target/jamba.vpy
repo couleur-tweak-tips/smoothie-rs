@@ -93,7 +93,7 @@ else:
                 cachefile=cache_file
             )
         elif sp in ['bs','bestsource', 'best source', 'best-source', 'best_source']:
-            clip = core.bs.VideoSource(input_video, hwdevice="d3d11va")
+            clip = core.bs.VideoSource(input_video)
         elif sp in ['lsmas','lsmash', 'lwsmashsource', 'smash', 'l-smash', 'l-smash-works', 'lsmashworks']:
     
             clip: vs.VideoNode = core.lsmas.LWLibavSource(
