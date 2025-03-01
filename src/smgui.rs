@@ -12,6 +12,7 @@ use eframe::egui;
 use winit::raw_window_handle::HasWindowHandle;
 
 struct SmApp {
+    first_frame: bool,
     recipe: Recipe,
     metadata: WidgetMetadata,
     selected_files: Vec<PathBuf>,
@@ -95,6 +96,7 @@ pub fn sm_gui<'gui>(
 
            Ok(Box::new(
                 SmApp {
+                    first_frame: true,
                     recipe_saved: format!("{:?}", recipe),
                     recipe,
                     metadata,
@@ -339,19 +341,16 @@ impl eframe::App for SmApp {
                             }
                             "bool" => {
                                 let mut bool: bool = crate::YES.contains(&value.as_str());
-                                ui.horizontal(|ui| {
-                                    // ui.label(key.to_owned() + ":");
-                                    ui.checkbox(&mut bool, key);
-                                });
+                                let checkbox = ui.checkbox(&mut bool, key);
                                 *value = if bool {
-                                    if key == "stay on top" {
+                                    if key == "stay on top" && (self.first_frame || checkbox.clicked()) {
                                         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::AlwaysOnTop));
                                     }
                                     "yes".to_owned()
                                 } else {
                                     if key == "enabled" {
                                         category_visibility = false;
-                                    } else if key == "stay on top" {
+                                    } else if key == "stay on top" && (self.first_frame || checkbox.clicked()) {
                                         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::Normal));
                                     }
                                     "no".to_owned()
@@ -551,6 +550,7 @@ impl eframe::App for SmApp {
                     ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                 }
             }
+            self.first_frame = false;
         });
     }
 }
