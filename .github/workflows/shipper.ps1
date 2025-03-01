@@ -16,6 +16,8 @@ cargo build --release
 cp ./target/release/smoothie-rs.exe ./smoothie-rs/bin/
 if (-not(test-path ./smoothie-rs/bin/scripts/)){
     mkdir ./smoothie-rs/bin/scripts/
+} else {
+    Rename-Item ./smoothie-rs/bin/Scripts/ ./smoothie-rs/bin/scripts/
 }
 cp ./target/scripts/* ./smoothie-rs/bin/scripts/
 cp ./target/jamba.vpy ./smoothie-rs/
