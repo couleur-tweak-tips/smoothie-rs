@@ -1,5 +1,5 @@
-use std::{env, path::PathBuf, fs};
 use homedir;
+use std::{env, fs, os::windows::fs::FileTypeExt, path::PathBuf};
 
 const DEFAULT_RECIPE: &str = include_str!("../target/recipe.ini");
 const DEFAULT_ENCODING_PRESETS: &str = include_str!("../target/encoding_presets.ini");
@@ -38,7 +38,54 @@ pub fn get_config_path() -> PathBuf {
     return config_path;
 }
 
-pub fn get_recipe_path_custom(recipe_name : &str) -> PathBuf {
+pub fn get_config_filepaths() -> Vec<PathBuf> {
+    let mut ret = vec![];
+
+    let config_folder = get_config_path();
+
+    for file in config_folder
+        .read_dir()
+        .expect("Failed listing files in config folder")
+    {
+        let entry = file.expect("Failed unwrapping config folder directory entry");
+
+        let filetype = entry
+            .file_type()
+            .expect("Failed unwrapping config folder directory entry file type");
+
+        let filename = entry.file_name();
+
+        if filetype.is_dir() {
+            continue;
+        };
+
+        if filename.is_empty() {
+            continue;
+        }
+
+        let filename_str = filename
+            .to_str()
+            .expect("Failed unwrapping config folder filename from osstring to str");
+
+        if !filename_str.ends_with(".ini") {
+            continue;
+        }
+
+        if ["encoding_presets.ini", "defaults.ini"].contains(&filename_str) {
+            continue;
+        }
+
+        if filetype.is_symlink() || filetype.is_symlink_file() {
+            panic!("implement recipe file symlink parsing yourself :)")
+        }
+
+        ret.push(config_folder.join(filename_str.to_string()));
+    }
+
+    ret
+}
+
+pub fn get_recipe_path_custom(recipe_name: &str) -> PathBuf {
     let recipe_path = get_config_path().join(recipe_name);
     return recipe_path;
 }

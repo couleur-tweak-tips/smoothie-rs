@@ -13,6 +13,7 @@ use winit::raw_window_handle::HasWindowHandle;
 
 struct SmApp {
     first_frame: bool,
+    recipe_change_request: Option<String>,
     recipe: Recipe,
     metadata: WidgetMetadata,
     selected_files: Vec<PathBuf>,
@@ -97,6 +98,7 @@ pub fn sm_gui<'gui>(
            Ok(Box::new(
                 SmApp {
                     first_frame: true,
+                    recipe_change_request: None,
                     recipe_saved: format!("{:?}", recipe),
                     recipe,
                     metadata,
@@ -156,12 +158,24 @@ impl eframe::App for SmApp {
                 // self.allowed_to_close = true;
                 ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
             }
+            let ctrl_s = egui::KeyboardShortcut {
+                modifiers: egui::Modifiers {
+                    ctrl: true,
+                    alt: false,
+                    shift: false,
+                    mac_cmd: false,
+                    command: false,
+                },
+                logical_key: egui::Key::S,
+            };
+            let ctrl_s_pressed = ctx.input_mut(|i| i.consume_shortcut(&ctrl_s));
+
             egui::menu::bar(ui, |ui| {
                 egui::widgets::global_theme_preference_switch(ui);
                 if ui.button("README").clicked() {
                     self.show_about = true
                 }
-                // ui.label(" | ");
+
                 let open_button = ui
                 .button("open")
                 .on_hover_text_at_pointer("open recipe file");
@@ -203,26 +217,13 @@ impl eframe::App for SmApp {
                     }
                 }
 
-                let ctrl_s = egui::KeyboardShortcut {
-                    modifiers: egui::Modifiers {
-                        ctrl: true,
-                        alt: false,
-                        shift: false,
-                        mac_cmd: false,
-                        command: false,
-                    },
-                    logical_key: egui::Key::S,
-                };
-                // if ui.button("hash").clicked() {
-                //     println!("{:?}", self.recipe);
-                // }
 
                 // declare buttons and immediately handle if it's clicked OR if keyboard shortcut is "consumed" (pressed)
                 if ui
                     .button("save")
                     .on_hover_text_at_pointer("save recipe modifications to .ini")
                     .clicked()
-                    || ctx.input_mut(|i| i.consume_shortcut(&ctrl_s))
+                    || (ctrl_s_pressed && self.recipe_change_request.is_none())
                 {
                     self.recipe_saved = format!("{:?}", self.recipe);
                     save_recipe(
@@ -254,6 +255,41 @@ impl eframe::App for SmApp {
                     ctx.set_contents(recipe_txt).unwrap();
                 }
             });
+            egui::menu::bar(ui, |ui| {
+
+                let binding = PathBuf::from(self.args.recipe.clone());
+                let selected_recipe = binding
+                    .file_name().expect("Failed unwrapping file name from args.recipe")
+                    .to_str().expect("Failed unwrapping string from filename from args.recipe");
+
+                egui::ComboBox::from_label("")
+                .selected_text(selected_recipe)
+                .show_ui(ui, |ui| {
+                    let enum_values = crate::portable::get_config_filepaths();
+                    for enum_value in enum_values {
+
+                        let selected_value = enum_value.to_str().unwrap().to_string();
+
+                        if selected_value == self.args.recipe {
+                            continue
+                        }
+
+                        ui.selectable_value(
+                            &mut self.args.recipe,
+                            selected_value,
+                            enum_value.file_name().to_owned().unwrap().to_str().unwrap()
+                        );
+                    }
+                    if binding.to_str().unwrap().to_string() != self.args.recipe {
+                        self.recipe_change_request = Some(binding.to_str().unwrap().to_string());
+                        // let (recipe, metadata) = crate::recipe::get_recipe(&mut self.args);
+                        // self.recipe = recipe;
+                        // self.metadata = metadata;                    
+                    }
+
+                });
+            });
+            egui::menu::bar(ui, |_| {}); // <br>
             egui::ScrollArea::vertical().show(ui, |ui| {
                 for cat in &mut self.metadata.keys() {
                     let mut first_run: bool = true;
@@ -509,6 +545,56 @@ impl eframe::App for SmApp {
                     self.show_confirmation_dialog = true;
                 }
             }
+
+            if self.recipe_change_request.is_some() {
+                let old_recipe = self.recipe_change_request.clone().unwrap();
+                if format!("{:?}", self.recipe) != self.recipe_saved {
+                    egui::Window::new(
+                        "Do you want to save changes to ".to_owned()
+                            + PathBuf::from(old_recipe.clone())
+                                .file_name()
+                                .expect("Failed getting basename from recipe")
+                                .to_str()
+                                .unwrap()
+                            + "?",
+                    )
+                    .collapsible(false)
+                    .resizable(false)
+                    .show(ctx, |ui| {
+                        ui.horizontal(|ui| {
+                            if ui.button("Save").clicked() || ctrl_s_pressed {
+                                save_recipe(
+                                    &self.recipe,
+                                    &PathBuf::from(old_recipe.clone()),
+                                    &self.metadata,
+                                );
+                                self.recipe_change_request = None;
+                                let (recipe, metadata) = crate::recipe::get_recipe(&mut self.args);
+                                self.recipe = recipe.clone();
+                                self.recipe_saved = format!("{:?}", recipe);
+                                self.metadata = metadata;
+                            }
+                            if ui.button("Don't Save").clicked() {
+                                self.recipe_change_request = None;
+                                let (recipe, metadata) = crate::recipe::get_recipe(&mut self.args);
+                                self.recipe = recipe.clone();
+                                self.recipe_saved = format!("{:?}", recipe);
+                                self.metadata = metadata;
+                            }
+                            if ui.button("Cancel").clicked() {
+                                self.recipe_change_request = None;
+                                self.args.recipe = old_recipe;
+                            }
+                        });
+                    });
+                } else {
+                    self.recipe_change_request = None;
+                    let (recipe, metadata) = crate::recipe::get_recipe(&mut self.args);
+                    self.recipe = recipe.clone();
+                    self.recipe_saved = format!("{:?}", recipe);
+                    self.metadata = metadata;
+                }
+            }
             if self.show_confirmation_dialog {
                 if format!("{:?}", self.recipe) != self.recipe_saved {
                     egui::Window::new(
@@ -524,7 +610,7 @@ impl eframe::App for SmApp {
                     .resizable(false)
                     .show(ctx, |ui| {
                         ui.horizontal(|ui| {
-                            if ui.button("Save").clicked() {
+                            if ui.button("Save").clicked() || ctrl_s_pressed {
                                 save_recipe(
                                     &self.recipe,
                                     &PathBuf::from(&self.args.recipe),
