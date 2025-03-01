@@ -18,7 +18,6 @@ struct SmApp {
     show_confirmation_dialog: bool,
     allowed_to_close: bool,
     show_about: bool,
-    recipe_filepath: String,
     args: Arguments,
     start_rendering: bool,
     // yeah that's the damn typename
@@ -74,7 +73,6 @@ pub fn save_recipe(recipe: &Recipe, recipe_filename: &PathBuf, metadata: &Widget
 pub fn sm_gui<'gui>(
     recipe: Recipe,
     metadata: WidgetMetadata,
-    recipe_filepath: String,
     args: Arguments,
     sender: Sender<(Recipe, Arguments, Option<windows::Win32::Foundation::HWND>)>,
 ) -> Result<(), eframe::Error> {
@@ -104,7 +102,6 @@ pub fn sm_gui<'gui>(
                     show_confirmation_dialog: false,
                     allowed_to_close: false,
                     show_about: false,
-                    recipe_filepath,
                     args,
                     start_rendering: false,
                     sender: sender
@@ -117,7 +114,7 @@ pub fn sm_gui<'gui>(
 
 impl eframe::App for SmApp {
     
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             if self.start_rendering {
                 let mut scoped_args = self.args.clone();
@@ -125,7 +122,7 @@ impl eframe::App for SmApp {
 
 
                 let hwnd: Option<windows::Win32::Foundation::HWND> = if cfg!(windows) {
-                    let winit::raw_window_handle::RawWindowHandle::Win32(handle) = _frame.window_handle().unwrap().as_raw() else {
+                    let winit::raw_window_handle::RawWindowHandle::Win32(handle) = frame.window_handle().unwrap().as_raw() else {
                         panic!("Unsupported platform");
                     };
                     let ptr = handle.hwnd.get() as *mut std::ffi::c_void;
@@ -165,12 +162,12 @@ impl eframe::App for SmApp {
                 // ui.label(" | ");
                 let open_button = ui
                 .button("open")
-                .on_hover_text_at_pointer("select videos to render with");
+                .on_hover_text_at_pointer("open recipe file");
                 
                 if open_button
                     .clicked() || open_button.secondary_clicked()
                 {
-                    let to_open = PathBuf::from(self.recipe_filepath.clone()).display().to_string();
+                    let to_open = PathBuf::from(self.args.recipe.clone()).display().to_string();
                     dbg!(&to_open);
                     if open_button.secondary_clicked() {
                         let mut ctx = ClipboardContext::new().unwrap();
@@ -196,7 +193,7 @@ impl eframe::App for SmApp {
                         .pick_files();
 
                     if let Some(input_vids) = input {
-                        // used later in an if statement later down
+                        // used in an if statement later down
                         if !input_vids.is_empty() {
                             self.selected_files = input_vids;
                             self.start_rendering = true;
@@ -228,7 +225,7 @@ impl eframe::App for SmApp {
                     self.recipe_saved = format!("{:?}", self.recipe);
                     save_recipe(
                         &self.recipe,
-                        &PathBuf::from(&self.recipe_filepath),
+                        &PathBuf::from(&self.args.recipe),
                         &self.metadata,
                     );
                 }
@@ -237,7 +234,7 @@ impl eframe::App for SmApp {
                     .on_hover_text_at_pointer(concat!(
                         "SHIFT+click: wraps in a codeblock\n",
                         "CTRL+click: omits disabled categories\n",
-                        "yes, they can be combined"
+                        "try to guess what CTRL+SHIFT+CLICK does :)"
                     ))
                     .clicked()
                 {
@@ -415,6 +412,7 @@ impl eframe::App for SmApp {
                                 ui.label(key.to_owned() + "- TODO");
                             }
                         }
+                    
                     }
                     if category_visibility {
                         ui.separator();
@@ -514,12 +512,11 @@ impl eframe::App for SmApp {
             }
             if self.show_confirmation_dialog {
                 if format!("{:?}", self.recipe) != self.recipe_saved {
-                    // sorry, gotta do long ass title inline because rust ownership sucks
                     egui::Window::new(
                         "Do you want to save changes to ".to_owned()
-                            + PathBuf::from(self.recipe_filepath.clone())
+                            + PathBuf::from(self.args.recipe.clone())
                                 .file_name()
-                                .expect("Failed getting basename from recipe_filepath")
+                                .expect("Failed getting basename from recipe")
                                 .to_str()
                                 .unwrap()
                             + "?",
@@ -531,7 +528,7 @@ impl eframe::App for SmApp {
                             if ui.button("Save").clicked() {
                                 save_recipe(
                                     &self.recipe,
-                                    &PathBuf::from(&self.recipe_filepath),
+                                    &PathBuf::from(&self.args.recipe),
                                     &self.metadata,
                                 );
                                 self.show_confirmation_dialog = false;

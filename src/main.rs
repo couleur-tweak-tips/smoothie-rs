@@ -7,15 +7,12 @@ use recipe::Recipe;
 use render::vspipe_render;
 
 #[cfg(windows)]
-use winapi::um::{
-    wincon::GetConsoleWindow,
-    winuser::ShowWindow,
-};
+use winapi::um::{wincon::GetConsoleWindow, winuser::ShowWindow};
 
 mod cli;
 mod cmd;
-mod smgui;
 mod ffpb;
+mod smgui;
 // mod ffpb2;
 mod parse;
 mod portable;
@@ -108,8 +105,8 @@ fn main() {
 
         let (sender, receiver) =
             channel::<(Recipe, Arguments, Option<windows::Win32::Foundation::HWND>)>();
-        
-        let _ret = smgui::sm_gui(recipe.clone(), _metadata, args.recipe.clone(), args, sender);
+
+        let _ret = smgui::sm_gui(recipe.clone(), _metadata, args, sender);
 
         #[cfg(windows)]
         if interact {
@@ -145,9 +142,11 @@ fn main() {
     let commands: Vec<SmCommand> = cmd::build_commands(args, payloads, recipe);
     if return_recipe {
         for command in commands {
-            println!("recipe={}", (format!("{:?}", &command.recipe)).replace("Recipe { data: {", "{ \"data\": {"))
+            println!(
+                "recipe={}",
+                (format!("{:?}", &command.recipe)).replace("Recipe { data: {", "{ \"data\": {")
+            )
         }
-
     } else {
         vspipe_render(commands, progress);
     }

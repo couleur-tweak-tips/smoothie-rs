@@ -6,7 +6,8 @@ const DEFAULT_ENCODING_PRESETS: &str = include_str!("../target/encoding_presets.
 
 fn get_target_path() -> PathBuf {
     let current_exe = env::current_exe().expect("Could not determine exe");
-    let target_dir = current_exe.parent()
+    let target_dir = current_exe
+        .parent()
         .expect("Could not get directory of executable")
         .parent()
         .expect("Could not get directory of directory's executable??");
@@ -18,9 +19,10 @@ fn is_portable() -> bool {
     return portable.exists();
 }
 
+// config_path as in config folder paths
 pub fn get_config_path() -> PathBuf {
     let config_path: PathBuf;
-    
+
     if cfg!(target_os = "windows") || is_portable() {
         config_path = get_target_path();
     } else {
@@ -29,10 +31,9 @@ pub fn get_config_path() -> PathBuf {
             .expect("How do you not have a user dir?");
         config_path = home_dir.join(".config/smoothie-rs");
         if !config_path.exists() {
-            fs::create_dir_all(&config_path)
-                .expect("Failed to create config folder");
+            fs::create_dir_all(&config_path).expect("Failed to create config folder");
         }
-    } 
+    }
 
     return config_path;
 }
@@ -66,20 +67,14 @@ pub fn get_last_args_path() -> PathBuf {
     let last_args: PathBuf;
 
     if cfg!(target_os = "windows") || is_portable() {
-        last_args = get_target_path()
-            .join("last_args.txt");
+        last_args = get_target_path().join("last_args.txt");
     } else {
         let home_dir = homedir::my_home()
             .unwrap()
             .expect("How do you not have a user dir?");
         last_args = home_dir.join(".local/share/smoothie-rs/last_args.txt");
         if !last_args.exists() {
-            fs::create_dir_all(
-                last_args
-                .parent()
-                .unwrap())
-                .expect("Failed to create local folder"
-                );
+            fs::create_dir_all(last_args.parent().unwrap()).expect("Failed to create local folder");
         }
     }
 
