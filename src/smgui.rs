@@ -13,6 +13,7 @@ use winit::raw_window_handle::HasWindowHandle;
 
 struct SmApp {
     first_frame: bool,
+    save_new_recipe: bool,
     recipe_change_request: Option<String>,
     recipe: Recipe,
     metadata: WidgetMetadata,
@@ -98,6 +99,7 @@ pub fn sm_gui<'gui>(
            Ok(Box::new(
                 SmApp {
                     first_frame: true,
+                    save_new_recipe: false,
                     recipe_change_request: None,
                     recipe_saved: format!("{:?}", recipe),
                     recipe,
@@ -428,7 +430,7 @@ impl eframe::App for SmApp {
                                     ui.label(key.to_owned() + ":");
                                     let response = ui.add(
                                         egui::Slider::new(&mut int, min..=max)
-                                            //.text(key)
+                                            .clamping(egui::SliderClamping::Never)
                                             .step_by(increment),
                                     );
 
@@ -482,10 +484,6 @@ impl eframe::App for SmApp {
                     }
                 }
 
-                // if i.consume_shortcut(&Ctrls){
-                //     println!("you pressed ctrl+s");
-                // }
-
                 if !self.selected_files.is_empty() {
                     self.start_rendering = true;
                 }
@@ -496,12 +494,6 @@ impl eframe::App for SmApp {
                     .collapsible(false)
                     .resizable(false)
                     .show(ctx, |ui| {
-                        ui.heading("\nknown bugs");
-                        ui.label(
-                            concat!(
-                                "\n- Starting to render causes the GUI to freeze instead of closing, just minimize it tbh"
-                            ),
-                        );
                         ui.heading("\nwhat is this");
                         ui.label(
                             "user interface to edit the recipe.ini text file more conveniently",
@@ -524,7 +516,7 @@ impl eframe::App for SmApp {
                                 "github\n",
                                 "https://github.com/couleur-tweak-tips/smoothie-rs",
                             )
-                            .on_hover_text_at_pointer("see /smrs-egui/ folder")
+                            .on_hover_text_at_pointer("see /src/smgui.rs folder")
                             .secondary_clicked()
                         {
                             let url = "https://github.com/couleur-tweak-tips/smoothie-rs";
@@ -545,7 +537,10 @@ impl eframe::App for SmApp {
                     self.show_confirmation_dialog = true;
                 }
             }
-
+            if self.save_new_recipe {
+                self.recipe_saved = format!("{:?}", self.recipe);
+                self.save_new_recipe = false;
+            }
             if self.recipe_change_request.is_some() {
                 let old_recipe = self.recipe_change_request.clone().unwrap();
                 if format!("{:?}", self.recipe) != self.recipe_saved {
@@ -571,8 +566,11 @@ impl eframe::App for SmApp {
                                 self.recipe_change_request = None;
                                 let (recipe, metadata) = crate::recipe::get_recipe(&mut self.args);
                                 self.recipe = recipe.clone();
-                                self.recipe_saved = format!("{:?}", recipe);
                                 self.metadata = metadata;
+                                // the recipe isn't formatted yet, let it go through a frame
+                                // to normalize bools and int slider increments
+                                //self.recipe_saved = format!("{:?}", recipe);
+                                self.save_new_recipe;
                             }
                             if ui.button("Don't Save").clicked() {
                                 self.recipe_change_request = None;
