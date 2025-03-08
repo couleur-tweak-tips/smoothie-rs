@@ -1,10 +1,16 @@
 ## smoothie-rs
 
-rewrite of [Smoothie](https://github.com/couleur-tweak-tips/smoothie) in rust, for now you can find more info and documentation about what Smoothie is in [the old python repo](https://github.com/couleur-tweak-tips/smoothie)
+rewrite of [Smoothie](https://github.com/couleur-tweak-tips/smoothie) in rust, find more info and documentation Smoothie is on [ctt.cx/smoothie](https://ctt.cx/video/smoothie)
 
 Thanks to yalter and anima for inspiration
 
 ## installation
+
+## Installer
+
+[Get the latest installer.exe here](https://github.com/couleur-tweak-tips/SmoothieInstaller/releases/latest/download/SmoothieInstaller.exe)
+
+## Portable
 
 It's as simple as extracting the [latest nightly release zip](https://github.com/couleur-tweak-tips/smoothie-rs/releases/latest/download/smoothie-rs-nightly.zip) to a folder and running `launch.bat`
 
