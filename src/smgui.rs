@@ -1,6 +1,6 @@
 use crate::{
     cli::Arguments,
-    recipe::{export_recipe, Recipe, WidgetMetadata},
+    recipe::{export_recipe, parse_recipe, Recipe, WidgetMetadata},
 };
 use std::{
     fs::File, io::Write,
@@ -10,6 +10,7 @@ use std::{
 use copypasta::{ClipboardContext, ClipboardProvider};
 use eframe::egui;
 use winit::raw_window_handle::HasWindowHandle;
+use indexmap::map::IndexMap;
 
 struct SmApp {
     first_frame: bool,
@@ -19,13 +20,17 @@ struct SmApp {
     metadata: WidgetMetadata,
     selected_files: Vec<PathBuf>,
     show_confirmation_dialog: bool,
+    show_merge_dialog: bool,
+    staging_merge: Option<(Recipe, IndexMap<String, IndexMap<String, bool>>)>,
     allowed_to_close: bool,
     show_about: bool,
     args: Arguments,
     start_rendering: bool,
     // yeah that's the damn typename
     recipe_saved: String,
-    sender: Sender<(Recipe, Arguments, Option<windows::Win32::Foundation::HWND>)>
+    sender: Sender<(Recipe, Arguments, Option<windows::Win32::Foundation::HWND>)>,
+    make_new_recipe: bool,
+    new_recipe_filename: String,
 }
 
 pub const WINDOW_NAME: &str = "smoothie-app";
@@ -41,7 +46,7 @@ pub fn save_recipe(recipe: &Recipe, recipe_filename: &PathBuf, metadata: &Widget
         None => panic!("Could not resolve Smoothie's binary directory `{exe:?}`"),
     };
 
-    let recipe_path = if PathBuf::from(recipe_filename.clone()).exists() {
+    let recipe_path = if recipe_filename.clone().exists() {
         PathBuf::from(recipe_filename)
     } else {
         let cur_dir_rc = bin_dir.join(recipe_filename);
@@ -73,6 +78,7 @@ pub fn save_recipe(recipe: &Recipe, recipe_filename: &PathBuf, metadata: &Widget
     println!("{}", &content);
 }
 
+#[allow(clippy::extra_unused_lifetimes)]
 pub fn sm_gui<'gui>(
     recipe: Recipe,
     metadata: WidgetMetadata,
@@ -91,6 +97,7 @@ pub fn sm_gui<'gui>(
         ..Default::default()
     };
 
+
     eframe::run_native(
         WINDOW_NAME,
         options,
@@ -98,6 +105,8 @@ pub fn sm_gui<'gui>(
 
            Ok(Box::new(
                 SmApp {
+                    show_merge_dialog: false,
+                    staging_merge: None,
                     first_frame: true,
                     save_new_recipe: false,
                     recipe_change_request: None,
@@ -110,7 +119,9 @@ pub fn sm_gui<'gui>(
                     show_about: false,
                     args,
                     start_rendering: false,
-                    sender: sender
+                    sender,
+                    make_new_recipe: false,
+                    new_recipe_filename: String::new(),
             }
         ))
     }),
@@ -160,6 +171,7 @@ impl eframe::App for SmApp {
                 // self.allowed_to_close = true;
                 ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
             }
+ 
             let ctrl_s = egui::KeyboardShortcut {
                 modifiers: egui::Modifiers {
                     ctrl: true,
@@ -171,6 +183,19 @@ impl eframe::App for SmApp {
                 logical_key: egui::Key::S,
             };
             let ctrl_s_pressed = ctx.input_mut(|i| i.consume_shortcut(&ctrl_s));
+
+            let ctrl_p = egui::KeyboardShortcut {
+                modifiers: egui::Modifiers {
+                    ctrl: true,
+                    alt: false,
+                    shift: false,
+                    mac_cmd: false,
+                    command: false,
+                },
+                logical_key: egui::Key::P,
+            };
+            let ctrl_p_pressed = ctx.input_mut(|i| i.consume_shortcut(&ctrl_p));
+
 
             egui::menu::bar(ui, |ui| {
                 egui::widgets::global_theme_preference_switch(ui);
@@ -257,14 +282,14 @@ impl eframe::App for SmApp {
                     ctx.set_contents(recipe_txt).unwrap();
                 }
             });
-            egui::menu::bar(ui, |ui| {
+            //egui::menu::bar(ui, |ui| {
 
-                let binding = PathBuf::from(self.args.recipe.clone());
-                let selected_recipe = binding
-                    .file_name().expect("Failed unwrapping file name from args.recipe")
-                    .to_str().expect("Failed unwrapping string from filename from args.recipe");
+            let binding = PathBuf::from(self.args.recipe.clone());
+            let selected_recipe = binding
+                .file_name().expect("Failed unwrapping file name from args.recipe")
+                .to_str().expect("Failed unwrapping string from filename from args.recipe");
 
-                egui::ComboBox::from_label("")
+            egui::ComboBox::from_label("")
                 .selected_text(selected_recipe)
                 .show_ui(ui, |ui| {
                     let enum_values = crate::portable::get_config_filepaths();
@@ -281,16 +306,21 @@ impl eframe::App for SmApp {
                             selected_value,
                             enum_value.file_name().to_owned().unwrap().to_str().unwrap()
                         );
+
                     }
-                    if binding.to_str().unwrap().to_string() != self.args.recipe {
+                    if binding.to_str().unwrap() != self.args.recipe.as_str() {
                         self.recipe_change_request = Some(binding.to_str().unwrap().to_string());
                         // let (recipe, metadata) = crate::recipe::get_recipe(&mut self.args);
                         // self.recipe = recipe;
                         // self.metadata = metadata;                    
                     }
-
+                    ui.selectable_value(
+                        &mut self.make_new_recipe,
+                        true,
+                        "New recipe"
+                    );
                 });
-            });
+             //});
             egui::menu::bar(ui, |_| {}); // <br>
             egui::ScrollArea::vertical().show(ui, |ui| {
                 for cat in &mut self.metadata.keys() {
@@ -320,7 +350,7 @@ impl eframe::App for SmApp {
                                     &cat.clone().replace(" ", "-")
                                 );
 
-                                let _ = if ui.hyperlink_to(cat, &url).secondary_clicked() {
+                                if ui.hyperlink_to(cat, &url).secondary_clicked() {
                                     dbg!(&url);
                                     println!("Copied `{}` to clipboard", &url);
                                     let mut ctx = ClipboardContext::new().unwrap();
@@ -469,7 +499,7 @@ impl eframe::App for SmApp {
                                         .to_ascii_lowercase()
                                         .as_os_str()
                                         .to_str()
-                                        .expect("Failed "),
+                                        .expect("Failed convertin file extension to string"),
                                 ) {
                                     self.selected_files.push(path)
                                 } else {
@@ -488,6 +518,150 @@ impl eframe::App for SmApp {
                     self.start_rendering = true;
                 }
             });
+
+            if self.make_new_recipe {
+                let mut open = true;
+                egui::Window::new("new recipe").open(&mut open).show(ctx, |ui|{
+                    ui.label(format!("it will use current recipe ({}) as base", selected_recipe));
+                    ui.horizontal(|ui| {
+                        ui.label("file name: ");
+                        ui.add(egui::TextEdit::singleline(&mut self.new_recipe_filename).desired_width(200.0)).request_focus();
+                        ui.label(".ini")
+                    });
+                    if ui.button("create").clicked() {
+                    }
+                });
+                if !open {
+                    self.make_new_recipe = false;
+                }
+            }
+
+            if ctrl_p_pressed {
+                let clipboard = ClipboardContext::new().unwrap().get_contents().expect("Failed reading system clipboard");
+                let lines = clipboard.split("\n");
+                let mut cleaned: Vec<String>  = vec![];
+
+                #[allow(non_camel_case_types)]
+                enum _RecipeTypes {
+                    smoothie_rs,
+                    smoothie_py,
+                    teres,
+                    blur_18,
+                    blur_19,
+                    blur_20,
+                }
+
+                for line in lines {
+                    if line.is_empty() || line.starts_with("#") ||  line.starts_with("//") ||  line.starts_with(";") {
+                        continue
+                    }
+                    cleaned.push(line.to_owned());
+                };
+
+                if !cleaned.is_empty() {
+                    let mut to_merge = Recipe::new();
+
+                    parse_recipe(
+                        PathBuf::from(self.args.recipe.clone()),
+                        Some(cleaned.join("\n")), &mut to_merge,
+                        &mut None,
+                        false
+                    );
+
+                    let mut toggled: IndexMap<String, IndexMap<String, bool>> = IndexMap::new();
+
+                    for section in to_merge.keys() {
+                        toggled.insert(section.to_owned(), IndexMap::new());
+                    }
+
+                    for section in toggled.to_owned().keys() {
+                        for key in to_merge.get_section(section){
+                            toggled
+                                .entry(section.to_owned())
+                                .or_default()
+                                .insert(key.0.to_owned(), true);
+                        }
+                    }
+
+                    self.staging_merge = Some((to_merge, toggled));
+                    self.show_merge_dialog = true;
+                }
+
+            }
+
+            if self.show_merge_dialog {
+
+                egui::Window::new("merge pasted config").show(ctx, |ui|{
+
+                    let mut cancel = false;
+                    let mut merge = false;
+                    let mut invert_selection = false;
+                    ui.horizontal(|ui| {
+                        cancel = ui.button("cancel").clicked();
+                        merge = ui.button("merge").clicked();
+                        invert_selection = ui.button("invert").clicked();
+                    });
+                    let staging_recipe = self.staging_merge.as_mut().unwrap();
+                    for section in staging_recipe.0.to_owned().keys() {
+
+                        ui.horizontal(|ui| {
+
+                            let section_selection: Vec<bool> = staging_recipe.1.entry(section.to_owned()).or_default().values().cloned().collect();
+
+                            let mut select = !section_selection.contains(&false);
+
+                            let toggle_section = ui.checkbox(&mut select, section);
+
+                            let section = staging_recipe.1.entry(section.to_owned()).or_default();
+                           
+
+                            for (key, value) in section.to_owned().into_iter() {
+
+                                if toggle_section.clicked() {
+                                    section.insert(key.to_owned(), select);
+                                } else if invert_selection {
+                               
+                                    section.insert(key.to_owned(), !value);
+                                }
+                            }
+                        });
+
+                        for (key , value) in staging_recipe.0.get_section_mut(section){
+
+                            ui.horizontal(|ui| {
+
+                                let enabled = staging_recipe.1
+                                    .entry(section.to_owned())
+                                    .or_default()
+                                    .entry(key.to_owned())
+                                    .or_insert(false);
+
+                                ui.checkbox(enabled, key);
+                                *enabled = enabled.to_owned();
+                                ui.add(egui::TextEdit::singleline(&mut *value));
+                            });
+                        }
+                    }
+                    if merge {
+
+                        self.show_merge_dialog = false;
+                        for section in staging_recipe.0.to_owned().keys() {
+                            for (key, value) in staging_recipe.0.get_section(section){
+                                let enabled = 
+                                staging_recipe.1.entry(section.to_owned()).or_default().entry(key.to_owned()).or_insert(false);
+
+                                if !enabled.to_owned() { continue }
+                                self.recipe.insert_value(section, key.to_owned(), value.to_owned());
+                            }
+                        }
+
+                    }
+                    if cancel || merge {
+                        self.staging_merge = None;
+                        self.show_merge_dialog = false;
+                    }
+                });
+            }
 
             if self.show_about {
                 egui::Window::new("about smoothie app")
@@ -570,7 +744,7 @@ impl eframe::App for SmApp {
                                 // the recipe isn't formatted yet, let it go through a frame
                                 // to normalize bools and int slider increments
                                 //self.recipe_saved = format!("{:?}", recipe);
-                                self.save_new_recipe;
+                                //self.save_new_recipe;
                             }
                             if ui.button("Don't Save").clicked() {
                                 self.recipe_change_request = None;
