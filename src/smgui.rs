@@ -9,8 +9,14 @@ use std::{
 };
 use copypasta::{ClipboardContext, ClipboardProvider};
 use eframe::egui;
+#[cfg(windows)]
 use winit::raw_window_handle::HasWindowHandle;
 use indexmap::map::IndexMap;
+
+#[cfg(windows)]
+type WinHWND = Option<windows::Win32::Foundation::HWND>;
+#[cfg(not(windows))]
+type WinHWND = ();
 
 struct SmApp {
     first_frame: bool,
@@ -28,7 +34,7 @@ struct SmApp {
     start_rendering: bool,
     // yeah that's the damn typename
     recipe_saved: String,
-    sender: Sender<(Recipe, Arguments, Option<windows::Win32::Foundation::HWND>)>,
+    sender: Sender<(Recipe, Arguments, WinHWND)>,
     make_new_recipe: bool,
     new_recipe_filename: String,
 }
@@ -83,7 +89,7 @@ pub fn sm_gui<'gui>(
     recipe: Recipe,
     metadata: WidgetMetadata,
     args: Arguments,
-    sender: Sender<(Recipe, Arguments, Option<windows::Win32::Foundation::HWND>)>,
+    sender: Sender<(Recipe, Arguments, WinHWND)>,
 ) -> Result<(), eframe::Error> {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
 
@@ -137,18 +143,17 @@ impl eframe::App for SmApp {
                 let mut scoped_args = self.args.clone();
                 scoped_args.input = self.selected_files.clone();
 
-
+                #[cfg(windows)]
                 let hwnd: Option<windows::Win32::Foundation::HWND> = if cfg!(windows) {
                     let winit::raw_window_handle::RawWindowHandle::Win32(handle) = frame.window_handle().unwrap().as_raw() else {
                         panic!("Unsupported platform");
                     };
                     let ptr = handle.hwnd.get() as *mut std::ffi::c_void;
                     Some(windows::Win32::Foundation::HWND(ptr))
-                                      
-                } else {
-                    None
                 };
 
+                #[cfg(not(windows))]
+                let hwnd: WinHWND = ();
                 let send_result = self.sender.send((self.recipe.clone(), scoped_args, hwnd));
 
                 if let Err(e) = send_result {
