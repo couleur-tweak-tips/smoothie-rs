@@ -144,7 +144,7 @@ impl eframe::App for SmApp {
                 scoped_args.input = self.selected_files.clone();
 
                 #[cfg(windows)]
-                let hwnd: Option<windows::Win32::Foundation::HWND> = if cfg!(windows) {
+                let hwnd: Option<windows::Win32::Foundation::HWND> = {
                     let winit::raw_window_handle::RawWindowHandle::Win32(handle) = frame.window_handle().unwrap().as_raw() else {
                         panic!("Unsupported platform");
                     };
