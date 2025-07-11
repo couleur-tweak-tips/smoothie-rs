@@ -96,7 +96,7 @@ pub fn resolve_outpath(
     }
 
     #[rustfmt::skip]
-    let fruits: Vec<&str> = [
+    const FRUITS: &'static [&'static str] = &[
         "Apple",      "Apricot",     "Avocado",     "Banana",     "Blackberry",
         "Blueberry",  "Cantaloupe",  "Cherry",      "Coconut",    "Cranberry",
         "Cucumber",   "Durian",      "Date",        "Eggplant",   "Fig",
@@ -105,12 +105,12 @@ pub fn resolve_outpath(
         "Orange",     "Papaya",      "Passion",     "Peach",      "Pear",
         "Pineapple",  "Pitaya",      "Plum",        "Pomelo",     "Quince",
         "Raspberry",  "Starfruit",   "Strawberry",  "Tomato",     "Watermelon",
-    ].to_vec();
+    ];
 
     let mut format = if dont_format {
         "%FILENAME%-SM".to_string()
     } else {
-        recipe.get("output", "file format").to_uppercase()
+        recipe.get("output", "file format")
         // .get("output")
         // .expect("Failed getting [output] from recipe")
         // .get("file format")
@@ -137,14 +137,14 @@ pub fn resolve_outpath(
             "%FRUITS%",
             &format!(
                 " {}",
-                fruits
+                FRUITS
                     .choose(&mut rand::rng())
                     .expect("Failed to select a random suffix")
             ),
         );
     }
     // create list of vars with section, key, and placeholder name
-    let variables = vec![
+    const VARIABLES: &'static [(&'static str, &'static str, &'static str)] = &[
         ("interpolation", "fps", "INTERP_FPS"),
         ("interpolation", "speed", "SPEED"),
         ("interpolation", "tuning", "TUNING"),
@@ -157,13 +157,13 @@ pub fn resolve_outpath(
         ("pre-interp", "factor", "FACTOR"),
     ];
     // loop through each var
-    for (section, key, var) in variables {
+    for (section, key, var) in VARIABLES {
         // check if file format string contains this var's placeholder
         if format.contains(&format!("%{}%", var)) {
             // get var value from recipe using section and key
             let mut value = recipe.get(section, key);
             // truncate weigting var if too long
-            if key == "weighting" && value.len() > 15 {
+            if *key == "weighting" && value.len() > 15 {
                 value = format!("{}..", &value[..15]);
             }
             // replace filename forbidden characters with underscores
