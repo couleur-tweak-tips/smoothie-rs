@@ -10,6 +10,7 @@ from tempfile import gettempdir # ffms2 index
 from math import floor # toframes()
 import json # loading recipe
 import re # get_sec()
+import logging
 
 path_dirname = path.dirname(__file__).replace('\\\\?\\', '')
 
@@ -23,8 +24,16 @@ from scripts import adjust
 from scripts import filldrops
 from scripts.consts import YES, NO
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] [%(levelname)s] %(message)s",
+    datefmt="%I:%M%p",
+    stream=sys.stderr,
+    force=True
+)
+
 if environ.get("SM_RECIPE") not in [None, ""]:
-    print("USING MPV-PURPOSED SM_RECIPE ENV VAR")
+    logging.info("Using mpv-purposed 'SM_RECIPE' env var")
     recipe = environ.get("SM_RECIPE").replace('recipe=', '', 1)
 
 
@@ -52,21 +61,14 @@ try:  # I have no clue why it returns a str the first time, that works though :s
         rc = (recipe)['data']
 
 except json.decoder.JSONDecodeError:
-    print(f"\n\nRecipe: {recipe}\n")
+    logging.critical(f"Recipe content: {recipe}")
     raise Exception("Failed to parse the passed recipe as a JSON string" + recipe)
 
+log_level = logging.INFO if rc['miscellaneous']['always verbose'].lower() in YES else logging.WARNING
+logging.getLogger().setLevel(log_level)
 
-def verb(*msg, **kwargs):
-    if rc['miscellaneous']['always verbose'].lower() in YES:
-        print("VERB:", *msg, file=sys.stderr, **kwargs)
-
-
-def eprint(*msg, **kwargs):
-    print("ERR:", *msg, file=sys.stderr, **kwargs)
-
-
-verb(f"CONTEXT: Using vapoursynth bindings from {vs.__file__}")
-verb(f"CONTEXT: __file__: {__file__}")
+logging.info(f"Using vapoursynth bindings from {vs.__file__}")
+logging.info(f"__file__: {__file__}")
 
 if 'video_in' in vars():
     clip = video_in
@@ -83,7 +85,7 @@ else:
         clip: vs.VideoNode = core.avisource.AVISource(input_video)
     else:
 
-        verb(f"cache_file: {cache_file}")
+        logging.info(f"Cache file: {cache_file}")
 
         sp = rc['miscellaneous']['source plugin']
 
@@ -93,7 +95,7 @@ else:
                 cachefile=cache_file
             )
         elif sp in ['bs','bestsource', 'best source', 'best-source', 'best_source']:
-            clip = core.bs.VideoSource(input_video)
+            clip = core.bs.VideoSource(input_video, showprogress=False)
         elif sp in ['lsmas','lsmash', 'lwsmashsource', 'smash', 'l-smash', 'l-smash-works', 'lsmashworks']:
     
             clip: vs.VideoNode = core.lsmas.LWLibavSource(
@@ -116,7 +118,7 @@ else:
             
             )
         else:
-            eprint(f"unknown source plugin `{sp}`, defaulting to ffms2")
+            logging.warning(f"Unknown source plugin '{sp}', defaulting to ffms2")
             clip: vs.VideoNode = core.ffms2.Source(
                 source=input_video,
                 cachefile=cache_file
@@ -126,9 +128,9 @@ else:
 # this is for fps comparisons
 if rc.get('runtime') and rc.get('runtime').get('fpscap'):
 
-    fpscap = rc.get('runtime').get('fpscap')
-    eprint(f"CAPPING FRAME-RATE TO {fpscap}")
-    clip = havsfunc.ChangeFPS(clip, int(fpscap), 1)
+    fps_cap = rc.get('runtime').get('fpscap')
+    logging.warning(f"Capping FPS to {fps_cap}")
+    clip = havsfunc.ChangeFPS(clip, int(fps_cap), 1)
 
 if rc.get('runtime') and (rt := rc.get('runtime')).get('timecodes'):
     def get_sec(timecode):
@@ -163,7 +165,7 @@ if rc.get('runtime') and (rt := rc.get('runtime')).get('timecodes'):
 
         s, e = toframes(start), toframes(end)
 
-        verb(f"Index #{index}: from {start} (f.{s}) to {end} (f.{e})")
+        logging.info(f"Index #{index}: from {start} (f.{s}) to {end} (f.{e})")
         if rt['cut type'] == "trim":
             if index == 0:
                 toadd = clip[s:e]
@@ -186,7 +188,7 @@ if rc.get('runtime') and (rt := rc.get('runtime')).get('timecodes'):
 def resolve_mask_path(folder_path: str, file_name: str):
 
     if file_name in NO:
-        eprint(f"GOT: {folder_path} AND {file_name}")
+        logging.error(f"Masking enabled but file name is missing. Got folder: '{folder_path}', file: '{file_name}'")
         raise ValueError(
             "If masking is enabled you MUST provide `[artifact masking] file name:`"
         )
@@ -200,7 +202,7 @@ def resolve_mask_path(folder_path: str, file_name: str):
         mask_path = path.join(default_mask_dir, file_name)
 
         if not path.exists(mask_path):
-            eprint(f"EXPECTED: {mask_path}")
+            logging.error(f"Could not find mask file. Expected at: '{mask_path}'")
             raise ValueError(
                 "Could not resolve your mask's input path, \n"
                 "The path of the mask you specify must be absolute \n"
@@ -280,7 +282,7 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
             raise NotADirectoryError("You need to specify the model's directory, not a file")
 
         if not path.isdir(relative_model_path):
-            eprint(f"\n\ndefault_model_dir does not exist, expected: {relative_model_path}")
+            logging.error(f"Default model directory does not exist, expected: '{relative_model_path}'")
             raise NotADirectoryError("Could not find RIFE model directory..")
 
         model_path = relative_model_path
@@ -358,7 +360,7 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
     )
 
     if pi['masking'] in YES:
-        verb('Masking pre-interp')
+        logging.info("Masking pre-interp")
         clip = Masking(
             to_mask=clip,
             original_clip=og_clip
@@ -403,7 +405,7 @@ if (ip := rc['interpolation'])['enabled'].lower() in YES:
 
     if clip.format.id in [vs.YUV444P8]:
         scaled = True
-        print("WARNING: (SVPFlow) Interpolation with i444 is normally not compatible, using a slower workaround.", file=sys.stderr)
+        logging.warning("SVPFlow interpolation with i444 is not directly compatible, using a slower workaround")
         clip = ScaleLuminance(scale=True, clip=clip)
     else:
         scaled = False
@@ -449,8 +451,7 @@ def FlowBlur(
 
     if flb['amount'].lower() in NO:
         return clip
-    verb(flb)
-    verb(f"Flowblurring @ {flb['amount']} amount")
+    logging.info(f"Flowblurring with settings: {flb}")
 
     # to be honest with you, I got no heckin idea how to configure this
     # mess with it and suggest what looks better 👍
@@ -469,7 +470,7 @@ def FlowBlur(
     if flb['masking'] not in YES:
         return clip
 
-    verb('Masking Flowblur')
+    logging.info("Masking Flowblur")
     return Masking(
         
         to_mask=clip,
@@ -488,12 +489,12 @@ if rc['flowblur']['do blending'] == 'before' and rc['flowblur']['enabled'].lower
 if (fbd := rc['frame blending'])['enabled'].lower() in YES:
 
     if fbd['weighting'].lower() in NO:
-        verb("No weighting mode passed: defaulting to equal")
+        logging.info("No weighting mode passed for frame blending: defaulting to 'equal'")
         fbd['weighting'] = 'equal'
 
     if fbd['fps'].lower() not in NO and float(fbd['fps']) >= ((clip.fps_num / clip.fps_den) + 1):
 
-        verb('Input video FPS is lower or equal compared to frame blending FPS, skipping frame blending')
+        logging.info("Input video FPS is lower or equal to target, skipping frame blending")
     else:
         weights = blending.parse_weights2(clip, fbd)
 
@@ -506,10 +507,7 @@ if (fbd := rc['frame blending'])['enabled'].lower() in YES:
         fps = round(clip.fps_num / clip.fps_den)
 
         clip = havsfunc.ChangeFPS(clip, int(fbd['fps']))
-        verb(
-            f'Blending {fps} down to {fbd["fps"]} @ {fbd["intensity"]} intensity ({len(weights)} blur-frames) ' +
-            f"using '{fbd['weighting']}' => " + blending.format_vec(weights)
-        )
+        logging.info(f"Blending {fps}fps down to {fbd['fps']}fps using '{fbd['weighting']}' => {blending.format_vec(weights)}")
 # frame blending
 
 
@@ -533,9 +531,9 @@ if (cg := rc['color grading'])['enabled'].lower() in YES:
 if (lt := rc['lut'])['enabled'].lower() in YES:
 
     if (rc['lut'])['path'].lower() in NO:
-        eprint("LUT filter was enabled, but no path was passed, skipping.. ")
+        logging.warning("LUT filter was enabled, but no path was passed, skipping.")
     else:
-        eprint(f"Adding a LUT with an opacity of {lt['opacity']}%, path: {lt['path']}")
+        logging.info(f"Applying LUT with opacity {lt['opacity']}%, path: {lt['path']}")
 
         og_format = clip.format
         # enforcing matrix? absolutely

@@ -6,7 +6,7 @@ use crate::parse::parse_encoding_args;
 use crate::recipe::Recipe;
 use crate::video::Payload;
 
-use crate::verb;
+use log::info;
 use std::env;
 
 #[derive(Debug)]
@@ -79,10 +79,10 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
         if args.vspipe_path.is_some(){
         args.vspipe_path.unwrap()}
     else if bin_dir_vspipe.exists() {
-        verb!("Using vspipe that's in same directory as binary");
+        info!("Using vspipe that's in same directory as binary");
         bin_dir_vspipe
     } else if vspipe_in_path.is_ok() {
-        verb!("Using VSPipe from PATH");
+        info!("Using VSPipe from PATH");
         vspipe_in_path.unwrap()
     } else {
         panic!("vspipe binary in path/bin dir not found");

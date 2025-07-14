@@ -1,6 +1,10 @@
 use crate::recipe::Recipe;
 use std::env;
 use std::ffi::c_int;
+use std::io::Write;
+use chrono::Local;
+use env_logger::Builder;
+use log::LevelFilter;
 
 #[cfg(windows)]
 #[allow(non_snake_case)]
@@ -75,22 +79,26 @@ pub fn set_window_position(recipe: &Recipe) {
 #[cfg(unix)]
 pub fn set_window_position(recipe: &Recipe) {}
 
-/// clap_verbosity_flag makes use of some confusing PhantomData, this is clear and can be set easily
-/// I don't see a simpler way to go about doing this without having to pass down a verbosity bool, lmk
 pub fn verbosity_init(arg: bool, recipe_key: bool) {
     let var: bool = env::var("SMOOTHIE_VERBOSE").is_ok() || env::var("SMVERB").is_ok();
+    
     if arg || recipe_key || var {
-        // this sets the variable on a process-level scope
         env::set_var("SMOOTHIE_VERBOSE", "1");
+        
+        // Initialize env_logger with custom format
+        Builder::new()
+            .format(|buf, record| {
+                let timestamp = Local::now().format("%I:%M%p");
+                writeln!(
+                    buf,
+                    "[{}] [{}] {}",
+                    timestamp,
+                    record.level(),
+                    record.args()
+                )
+            })
+            .filter_level(LevelFilter::Info)
+            .target(env_logger::Target::Stderr)
+            .init();
     }
-}
-
-#[macro_export]
-macro_rules! verb {
-    //() => {};
-    ($($arg:tt)*) => {{
-        if env::var("SMOOTHIE_VERBOSE").is_ok(){
-            eprintln!($($arg)*);
-        }
-    }};
 }

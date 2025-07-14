@@ -1,7 +1,7 @@
 use crate::cli::Arguments;
 use crate::portable;
 use crate::recipe::{parse_recipe, Recipe};
-use crate::verb;
+use log::info;
 use color_eyre::owo_colors::OwoColorize;
 use colored::Colorize;
 use serde::Deserialize;
@@ -51,7 +51,7 @@ pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
         if enc_arg_presets.contains_key("MACROS") {
             let macros = enc_arg_presets.get_section("MACROS");
             if macros.contains_key(word) {
-                verb!("Pushing {word:?} as macro");
+                info!("Pushing {word:?} as macro");
                 ret.push_str(
                     macros
                         .get(word)
@@ -64,7 +64,7 @@ pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
         if !codec.is_empty() {
             let codec_category = enc_arg_presets.get_section(&codec);
             if enc_arg_presets.clone().contains_key(&codec.to_uppercase()) {
-                verb!("Pushing {word:?} as an enc preset");
+                info!("Pushing {word:?} as an enc preset");
                 ret.push_str(
                     codec_category
                         .get(&*str::to_uppercase(word))
@@ -74,13 +74,13 @@ pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
         } else if codec_options.contains(&word.to_string()) {
             for option in enc_arg_presets.keys() {
                 if option.contains(word) {
-                    verb!("Found {option:?} for {word}");
+                    info!("Found {option:?} for {word}");
                     codec = option.clone();
                 }
             }
             // codec = word.to_lowercase().to_string();
         } else {
-            verb!("Pushing {word:?} as normal str");
+            info!("Pushing {word:?} as normal str");
             ret.push_str(word);
         }
     }

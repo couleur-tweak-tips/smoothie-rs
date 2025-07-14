@@ -1,5 +1,5 @@
 use crate::cli::Arguments;
-use crate::verb;
+use log::info;
 use crate::{NO, YES};
 use crate::portable;
 use indexmap::map::Entry;
@@ -124,7 +124,7 @@ pub fn parse_recipe(
         rc_str
     } else {
         assert!(ini.exists(), "Recipe at path `{ini:?}` does not exist");
-        verb!(
+        info!(
             "Parsing: {}",
             ini.display().to_string().replace("\\\\?\\", "")
         );

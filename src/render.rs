@@ -1,6 +1,5 @@
 use crate::cmd::SmCommand;
-use crate::verb;
-use std::env;
+use log::info;
 use std::process::{Command, Stdio};
 
 pub fn vspipe_render(commands: Vec<SmCommand>, mut progress: bool) {
@@ -15,10 +14,10 @@ pub fn vspipe_render(commands: Vec<SmCommand>, mut progress: bool) {
             )
         }
 
-        verb!("FF args: {}", cmd.ff_args.join(" "));
+        info!("FF args: {}", cmd.ff_args.join(" "));
 
         if previewing {
-            verb!(
+            info!(
                 "FFplay args: {}",
                 &cmd.ffplay_args.clone().unwrap().join(" ")
             );

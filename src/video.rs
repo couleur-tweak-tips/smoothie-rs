@@ -5,6 +5,7 @@ use rand::seq::IndexedRandom;
 use rfd::FileDialog;
 use std::{collections::HashMap, fs, path::PathBuf};
 use which::which;
+use log::info;
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -251,7 +252,7 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
             .set_directory("/")
             .pick_files();
 
-        dbg!(&input);
+        info!("Input: {:?}", input);
 
         args.input = match input {
             Some(paths) => paths,
