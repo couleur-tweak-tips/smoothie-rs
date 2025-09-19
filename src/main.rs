@@ -136,7 +136,7 @@ fn main() {
     };
 
     let return_recipe = args.return_recipe;
-    let progress = args.progress;
+    let progress = args.progress && !args.no_progress;
 
     payloads = video::resolve_input(&mut args, &recipe);
     let commands: Vec<SmCommand> = cmd::build_commands(args, payloads, recipe);

@@ -27,8 +27,13 @@ pub fn vspipe_render(commands: Vec<SmCommand>, mut progress: bool) {
         let vs = Command::new(cmd.vs_path)
             .args(cmd.vs_args)
             .stdout(Stdio::piped())
+            .stderr(if progress {
+                Stdio::null()
+            } else {
+                Stdio::inherit()
+            })
             .spawn()
-            .expect("Failed in spawning FFmpeg child");
+            .expect("Failed in spawning VSPipe child");
 
         let pipe = vs.stdout.expect("Failed piping out of VSPipe");
 
