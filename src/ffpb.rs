@@ -7,7 +7,6 @@ use std::{
     thread,
     time::Duration,
 };
-use colored::Colorize;
 
 fn new_error(msg: &str) -> Error {
     Error::new(ErrorKind::Other, msg)
@@ -25,45 +24,41 @@ pub fn ffmpeg(ffmpeg: ChildStderr, duration: usize, fps: Option<i32>) -> Result<
 
     let mut reader = BufReader::new(ffmpeg);
     let mut pb = RichProgress::new(
-        tqdm!(unit = " second".to_owned(), dynamic_ncols = true),
+        tqdm!(unit = "s".to_owned(), dynamic_ncols = true),
         vec![
             Column::Animation,
             Column::Percentage(1),
-            Column::Text("•".to_owned()),
+            Column::Text("Rendered:".to_owned()),
             Column::CountTotal,
-            Column::Text("•".to_owned()),
+            Column::Text("Time:".to_owned()),
             Column::ElapsedTime,
-            Column::Text(">".to_owned()),
+            Column::Text("ETA:".to_owned()),
             Column::RemainingTime,
-            Column::Text("•".to_owned()),
-            Column::Text("[red]0 FPS".to_owned()),
+            Column::Text("Speed:".to_owned()),
+            Column::Text("0 FPS".to_owned()),
         ],
     );
 
     pb.pb.total = duration;
 
     let read_byte = b'\r';
-
     let progress_rx = Regex::new(r"time=(\d{2}):(\d{2}):(\d{2})\.\d{2}").unwrap();
+    let mut last_update = std::time::Instant::now();
 
     loop {
-        let prepend_text = "".to_owned();
-
-        thread::sleep(Duration::from_secs_f32(0.1));
+        thread::sleep(Duration::from_millis(100));
 
         let mut buf = vec![];
         reader.read_until(read_byte, &mut buf)?;
 
         if let Ok(line) = String::from_utf8(buf) {
-            let std_line = prepend_text + &line;
-
-            if std_line == "" {
+            if line.is_empty() {
                 pb.refresh()?;
-                eprintln!();
+                println!();
                 break;
             }
 
-            if let Some(x) = progress_rx.captures_iter(&std_line).next() {
+            if let Some(x) = progress_rx.captures_iter(&line).next() {
                 let mut current =
                     time_to_secs(&x).map_err(|_| new_error("couldn't parse current duration."))?;
 
@@ -74,14 +69,11 @@ pub fn ffmpeg(ffmpeg: ChildStderr, duration: usize, fps: Option<i32>) -> Result<
                     }
                 }
 
-                pb.replace(9, Column::Text(format!("[red]{:.0} FPS", pb.pb.rate())));
-
-                if current >= pb.pb.total {
-                    pb.write(std_line.replace("\r", "").replace("\n", ""))?;
+                pb.replace(9, Column::Text(format!("{:.0} FPS", pb.pb.rate())));
+                if last_update.elapsed() > Duration::from_millis(200) {
+                    pb.update_to(current)?;
+                    last_update = std::time::Instant::now();
                 }
-                pb.update_to(current)?;
-            } else {
-                print!("{}", format!("{std_line}").red());
             }
         } else {
             break;

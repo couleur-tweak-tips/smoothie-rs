@@ -103,8 +103,12 @@ pub struct Arguments {
 
     // debugging
     /// Display progress bar
-    #[clap(long, default_value_t = false)]
+    #[clap(long, default_value_t = true)]
     pub progress: bool,
+
+    /// Disable progress bar
+    #[clap(long)]
+    pub no_progress: bool,
 
     /// Display details about recipe, what I personally use
     #[clap(short, long, default_value_t = false)]
