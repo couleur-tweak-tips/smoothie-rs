@@ -9,7 +9,7 @@ use std::{env, path::PathBuf, process::Command};
 #[clap(about, long_about = "", arg_required_else_help = false)]
 pub struct Arguments {
     // io
-    /// Input video file paths, quoted and separated by strings
+    /// Input video file paths or folders (recursive), quoted and separated by strings. If a folder is provided, all video files inside it will be processed.
     #[clap(short, long, conflicts_with="json", num_args=1..)]
     pub input: Vec<PathBuf>,
 
@@ -42,6 +42,10 @@ pub struct Arguments {
     /// Pass a VSPipe executable to run scripts from
     #[clap(long)]
     pub vspipe_path: Option<PathBuf>,
+
+    /// When an input is a folder, recursively scan for videos inside
+    #[clap(long, default_value_t = false)]
+    pub recursive: bool,
 
     // misc io
     /// Discard any audio tracks that'd pass to output

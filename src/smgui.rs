@@ -224,25 +224,43 @@ impl eframe::App for SmApp {
                         }
                     }
                 };
-                if ui
-                    .button("render")
-                    .on_hover_text_at_pointer("select videos to render with")
-                    .clicked()
-                {
-                    let input = rfd::FileDialog::new()
-                        .add_filter("Video file", crate::VIDEO_EXTENSIONS)
-                        .set_title("Select video(s) to queue to Smoothie")
-                        .set_directory("/")
-                        .pick_files();
+                ui.horizontal(|ui| {
+                    if ui
+                        .button("Select files")
+                        .on_hover_text_at_pointer("Select video files to queue to Smoothie")
+                        .clicked()
+                    {
+                        let input = rfd::FileDialog::new()
+                            .add_filter("Video file", crate::VIDEO_EXTENSIONS)
+                            .set_title("Select video(s) to queue to Smoothie")
+                            .set_directory("/")
+                            .pick_files();
 
-                    if let Some(input_vids) = input {
-                        // used in an if statement later down
-                        if !input_vids.is_empty() {
-                            self.selected_files = input_vids;
+                        if let Some(input_vids) = input {
+                            if !input_vids.is_empty() {
+                                self.selected_files = input_vids;
+                                self.start_rendering = true;
+                            }
+                        }
+                    }
+
+                    if ui
+                        .button("Select folder")
+                        .on_hover_text_at_pointer("Select a folder to queue all videos inside")
+                        .clicked()
+                    {
+                        if let Some(folder) = rfd::FileDialog::new()
+                            .set_title("Select a folder to queue to Smoothie")
+                            .set_directory("/")
+                            .pick_folder()
+                        {
+                            // store the chosen folder path in selected_files so it's processed like other inputs
+                            self.selected_files.clear();
+                            self.selected_files.push(folder);
                             self.start_rendering = true;
                         }
                     }
-                }
+                });
 
 
                 // declare buttons and immediately handle if it's clicked OR if keyboard shortcut is "consumed" (pressed)
