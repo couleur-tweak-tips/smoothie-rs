@@ -269,6 +269,10 @@ def Masking(
 if (pi := rc['pre-interp'])['enabled'].lower() in YES:
 
     model_path = pi['model'].strip('"')
+    
+    if model_path == "auto":
+        print("\n\n\033[31mERR:\033[0m Default Model has been removed, please set pre-interp:model to the models directory\n\n", file=sys.stderr)
+        sys.exit(-1)
 
     if not path.isdir(model_path):
 

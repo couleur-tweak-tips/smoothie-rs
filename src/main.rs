@@ -103,8 +103,12 @@ fn main() {
             }
         }
 
-        let (sender, receiver) =
-            channel::<(Recipe, Arguments, Option<windows::Win32::Foundation::HWND>)>();
+        #[cfg(windows)]
+        type WinHWND = Option<windows::Win32::Foundation::HWND>;
+        #[cfg(not(windows))]
+        type WinHWND = ();
+
+        let (sender, receiver) = channel::<(Recipe, Arguments, WinHWND)>();
 
         let _ret = smgui::sm_gui(recipe.clone(), _metadata, args, sender);
 
