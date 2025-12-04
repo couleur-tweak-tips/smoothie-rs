@@ -43,6 +43,9 @@ pub struct Arguments {
     #[clap(long)]
     pub vspipe_path: Option<PathBuf>,
 
+    #[clap(long, default_value_t = false)] 
+    pub recursive: bool,
+
     // misc io
     /// Discard any audio tracks that'd pass to output
     #[clap(long, visible_alias = "an", default_value_t = false)]
