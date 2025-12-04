@@ -16,9 +16,8 @@ extern "C" {
 
 #[cfg(windows)]
 pub fn set_window_position(recipe: &Recipe) {
-
     if cfg!(windows) {
-        return
+        return;
     }
     #[rustfmt::skip]
         let pos = {

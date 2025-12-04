@@ -9,7 +9,7 @@ use std::{env, path::PathBuf, process::Command};
 #[clap(about, long_about = "", arg_required_else_help = false)]
 pub struct Arguments {
     // io
-    /// Input video file paths, quoted and separated by strings
+    /// Input video file paths or folders (recursive), quoted and separated by strings. If a folder is provided, all video files inside it will be processed.
     #[clap(short, long, conflicts_with="json", num_args=1..)]
     pub input: Vec<PathBuf>,
 
@@ -42,6 +42,10 @@ pub struct Arguments {
     /// Pass a VSPipe executable to run scripts from
     #[clap(long)]
     pub vspipe_path: Option<PathBuf>,
+
+    /// When an input is a folder, recursively scan for videos inside
+    #[clap(long, default_value_t = false)]
+    pub recursive: bool,
 
     // misc io
     /// Discard any audio tracks that'd pass to output
@@ -205,7 +209,7 @@ If you'd like help, take a screenshot of this message and your recipe and come o
         };
     }
 
-    match first_arg.as_ref() {
+    let mut parsed_args: Arguments = match first_arg.as_ref() {
         "enc" | "encoding" | "presets" | "encpresets" | "macros" => {
             let presets_path = portable::get_encoding_presets_path();
             if !presets_path.exists() {
@@ -309,5 +313,42 @@ If you'd like help, take a screenshot of this message and your recipe and come o
 
             Arguments::parse()
         }
+    };
+
+    // Some launcher shortcuts (e.g., Windows SendTo) place a placeholder like `-i` in the
+    // shortcut's Target and Explorer appends the selected file/folder paths afterwards.
+    // Clap normally parses those correctly, but in some edge cases the `input` vector
+    // can end up empty or contain a lone dash. To be resilient, reconstruct inputs by
+    // scanning `env::args_os()` for `-i`/`--input` and collecting following non-flag
+    // tokens as file paths.
+    if parsed_args.input.is_empty() || parsed_args.input.iter().any(|p| p.to_string_lossy() == "-")
+    {
+        let raw_args: Vec<_> = env::args_os().collect();
+        let mut recovered: Vec<std::path::PathBuf> = Vec::new();
+
+        let mut i = 0;
+        while i < raw_args.len() {
+            let token = raw_args[i].to_string_lossy().to_string();
+            if token == "-i" || token == "--input" {
+                // collect following tokens until next token looks like a flag (starts with '-')
+                let mut j = i + 1;
+                while j < raw_args.len() {
+                    let next = raw_args[j].to_string_lossy().to_string();
+                    if next.starts_with('-') {
+                        break;
+                    }
+                    recovered.push(std::path::PathBuf::from(&raw_args[j]));
+                    j += 1;
+                }
+                break; // only handle the first occurrence
+            }
+            i += 1;
+        }
+
+        if !recovered.is_empty() {
+            parsed_args.input = recovered;
+        }
     }
+
+    parsed_args
 }

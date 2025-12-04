@@ -2,15 +2,16 @@ use crate::{
     cli::Arguments,
     recipe::{export_recipe, parse_recipe, Recipe, WidgetMetadata},
 };
-use std::{
-    fs::File, io::Write,
-    path::PathBuf,
-    sync::mpsc::Sender // used to retrieve SmCommands
-};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use eframe::egui;
-use winit::raw_window_handle::HasWindowHandle;
 use indexmap::map::IndexMap;
+use std::{
+    fs::File,
+    io::Write,
+    path::PathBuf,
+    sync::mpsc::Sender, // used to retrieve SmCommands
+};
+use winit::raw_window_handle::HasWindowHandle;
 
 struct SmApp {
     first_frame: bool,
@@ -97,40 +98,34 @@ pub fn sm_gui<'gui>(
         ..Default::default()
     };
 
-
     eframe::run_native(
         WINDOW_NAME,
         options,
-        Box::new(|_cc|{
-
-           Ok(Box::new(
-                SmApp {
-                    show_merge_dialog: false,
-                    staging_merge: None,
-                    first_frame: true,
-                    save_new_recipe: false,
-                    recipe_change_request: None,
-                    recipe_saved: format!("{:?}", recipe),
-                    recipe,
-                    metadata,
-                    selected_files: vec![], // file select dialog with render button
-                    show_confirmation_dialog: false,
-                    allowed_to_close: false,
-                    show_about: false,
-                    args,
-                    start_rendering: false,
-                    sender,
-                    make_new_recipe: false,
-                    new_recipe_filename: String::new(),
-            }
-        ))
-    }),
+        Box::new(|_cc| {
+            Ok(Box::new(SmApp {
+                show_merge_dialog: false,
+                staging_merge: None,
+                first_frame: true,
+                save_new_recipe: false,
+                recipe_change_request: None,
+                recipe_saved: format!("{:?}", recipe),
+                recipe,
+                metadata,
+                selected_files: vec![], // file select dialog with render button
+                show_confirmation_dialog: false,
+                allowed_to_close: false,
+                show_about: false,
+                args,
+                start_rendering: false,
+                sender,
+                make_new_recipe: false,
+                new_recipe_filename: String::new(),
+            }))
+        }),
     )
 }
 
-
 impl eframe::App for SmApp {
-    
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             if self.start_rendering {
@@ -144,7 +139,7 @@ impl eframe::App for SmApp {
                     };
                     let ptr = handle.hwnd.get() as *mut std::ffi::c_void;
                     Some(windows::Win32::Foundation::HWND(ptr))
-                                      
+
                 } else {
                     None
                 };
@@ -157,7 +152,7 @@ impl eframe::App for SmApp {
 
                 self.selected_files.clear();
                 self.start_rendering = false;
-       
+
                 // self.show_confirmation_dialog = true;
                 // self.allowed_to_close = true;
                 // let ctx = ctx.clone();
@@ -171,7 +166,7 @@ impl eframe::App for SmApp {
                 // self.allowed_to_close = true;
                 ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
             }
- 
+
             let ctrl_s = egui::KeyboardShortcut {
                 modifiers: egui::Modifiers {
                     ctrl: true,
@@ -206,7 +201,7 @@ impl eframe::App for SmApp {
                 let open_button = ui
                 .button("open")
                 .on_hover_text_at_pointer("open recipe file");
-                
+
                 if open_button
                     .clicked() || open_button.secondary_clicked()
                 {
@@ -224,25 +219,43 @@ impl eframe::App for SmApp {
                         }
                     }
                 };
-                if ui
-                    .button("render")
-                    .on_hover_text_at_pointer("select videos to render with")
-                    .clicked()
-                {
-                    let input = rfd::FileDialog::new()
-                        .add_filter("Video file", crate::VIDEO_EXTENSIONS)
-                        .set_title("Select video(s) to queue to Smoothie")
-                        .set_directory("/")
-                        .pick_files();
+                ui.horizontal(|ui| {
+                    if ui
+                        .button("Select files")
+                        .on_hover_text_at_pointer("Select video files to queue to Smoothie")
+                        .clicked()
+                    {
+                        let input = rfd::FileDialog::new()
+                            .add_filter("Video file", crate::VIDEO_EXTENSIONS)
+                            .set_title("Select video(s) to queue to Smoothie")
+                            .set_directory("/")
+                            .pick_files();
 
-                    if let Some(input_vids) = input {
-                        // used in an if statement later down
-                        if !input_vids.is_empty() {
-                            self.selected_files = input_vids;
+                        if let Some(input_vids) = input {
+                            if !input_vids.is_empty() {
+                                self.selected_files = input_vids;
+                                self.start_rendering = true;
+                            }
+                        }
+                    }
+
+                    if ui
+                        .button("Select folder")
+                        .on_hover_text_at_pointer("Select a folder to queue all videos inside")
+                        .clicked()
+                    {
+                        if let Some(folder) = rfd::FileDialog::new()
+                            .set_title("Select a folder to queue to Smoothie")
+                            .set_directory("/")
+                            .pick_folder()
+                        {
+                            // store the chosen folder path in selected_files so it's processed like other inputs
+                            self.selected_files.clear();
+                            self.selected_files.push(folder);
                             self.start_rendering = true;
                         }
                     }
-                }
+                });
 
 
                 // declare buttons and immediately handle if it's clicked OR if keyboard shortcut is "consumed" (pressed)
@@ -479,7 +492,7 @@ impl eframe::App for SmApp {
                                 ui.label(key.to_owned() + "- TODO");
                             }
                         }
-                    
+
                     }
                     if category_visibility {
                         ui.separator();
@@ -613,14 +626,13 @@ impl eframe::App for SmApp {
                             let toggle_section = ui.checkbox(&mut select, section);
 
                             let section = staging_recipe.1.entry(section.to_owned()).or_default();
-                           
+
 
                             for (key, value) in section.to_owned().into_iter() {
 
                                 if toggle_section.clicked() {
                                     section.insert(key.to_owned(), select);
                                 } else if invert_selection {
-                               
                                     section.insert(key.to_owned(), !value);
                                 }
                             }
@@ -647,8 +659,7 @@ impl eframe::App for SmApp {
                         self.show_merge_dialog = false;
                         for section in staging_recipe.0.to_owned().keys() {
                             for (key, value) in staging_recipe.0.get_section(section){
-                                let enabled = 
-                                staging_recipe.1.entry(section.to_owned()).or_default().entry(key.to_owned()).or_insert(false);
+                                let enabled = staging_recipe.1.entry(section.to_owned()).or_default().entry(key.to_owned()).or_insert(false);
 
                                 if !enabled.to_owned() { continue }
                                 self.recipe.insert_value(section, key.to_owned(), value.to_owned());
@@ -704,7 +715,6 @@ impl eframe::App for SmApp {
                         }
                     });
             }
-            
             if ctx.input(|i| i.viewport().close_requested()) && !self.allowed_to_close {
                 {
                     ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);

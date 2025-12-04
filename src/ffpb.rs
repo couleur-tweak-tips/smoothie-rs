@@ -1,3 +1,4 @@
+use colored::Colorize;
 use kdam::{tqdm, BarExt, Column, RichProgress};
 use regex::{Captures, Regex};
 use std::{
@@ -7,7 +8,6 @@ use std::{
     thread,
     time::Duration,
 };
-use colored::Colorize;
 
 fn new_error(msg: &str) -> Error {
     Error::new(ErrorKind::Other, msg)

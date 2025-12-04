@@ -90,7 +90,6 @@ pub fn parse_encoding_args(args: &Arguments, rc: &Recipe) -> String {
 
 // static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
-
 #[derive(Debug, Deserialize)]
 pub struct Release {
     pub tag_name: String,
@@ -133,4 +132,3 @@ pub fn parse_update() {
         }
     }
 }
-

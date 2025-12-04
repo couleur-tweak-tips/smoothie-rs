@@ -6,6 +6,39 @@ use rfd::FileDialog;
 use std::{collections::HashMap, fs, path::PathBuf};
 use which::which;
 
+/// Finds video files in a directory. If `recursive` is true, it will scan subdirectories.
+fn find_videos_in_folder(folder: &PathBuf, recursive: bool) -> Vec<PathBuf> {
+    let mut videos = Vec::new();
+
+    if !folder.is_dir() {
+        return videos;
+    }
+
+    if let Ok(entries) = fs::read_dir(folder) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+
+            if path.is_dir() {
+                if recursive {
+                    // Recursively scan subdirectories when requested
+                    videos.extend(find_videos_in_folder(&path, true));
+                }
+            } else if path.is_file() {
+                // Check if file has a video extension
+                if let Some(ext) = path.extension() {
+                    if let Some(ext_str) = ext.to_str() {
+                        if crate::VIDEO_EXTENSIONS.contains(&ext_str.to_lowercase().as_str()) {
+                            videos.push(path);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    videos
+}
+
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct Payload {
@@ -36,19 +69,19 @@ fn ensure_dir(dir: &PathBuf, silent: bool) {
     }
 }
 
+fn get_path(input: PathBuf) -> Option<PathBuf> {
+    match input.canonicalize() {
+        Ok(path) => Some(path),
+        Err(_) => {
+            println!("{input:?} does not exist or is invalid.");
+            None
+        }
+    }
+}
+
 /// Only returns videos that are valid (exists, ffprobe-able)
 fn probe_video(input: &PathBuf) -> Option<FfProbe> {
-    let path = match input.canonicalize() {
-        Ok(path) => path,
-        _ => {
-            println!(
-                "{}",
-                format!("{input:?} does not exist or is not a valid filepath, discarding..")
-                    .on_red()
-            );
-            return None;
-        }
-    };
+    let path = input.clone();
 
     // Try to open the file
     let file = match fs::File::open(&path) {
@@ -245,24 +278,86 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
 
     // Option 1: launched a shortcut that had --tui in args
     if args.tui && args.input.is_empty() && args.json.is_none() {
-        let input = FileDialog::new()
-            .add_filter("Video file", crate::VIDEO_EXTENSIONS)
-            .set_title("Select video(s) to queue to Smoothie")
-            .set_directory("/")
-            .pick_files();
+        if args.recursive {
+            // If recursive mode requested, allow picking a folder
+            let folder = FileDialog::new()
+                .set_title("Select a folder to queue to Smoothie")
+                .set_directory("/")
+                .pick_folder();
 
-        dbg!(&input);
+            match folder {
+                Some(f) => args.input = vec![f],
+                None => {
+                    // Fallback: use current working directory
+                    if let Ok(cwd) = std::env::current_dir() {
+                        println!(
+                            "{}",
+                            format!(
+                                "No folder selected; falling back to current directory: {:?}",
+                                cwd
+                            )
+                            .on_yellow()
+                        );
+                        args.input = vec![cwd];
+                    } else {
+                        eprintln!("Failed resolving current working directory, aborting");
+                        std::process::exit(1);
+                    }
+                }
+            }
+        } else {
+            // Default: pick files
+            let input = FileDialog::new()
+                .add_filter("Video file", crate::VIDEO_EXTENSIONS)
+                .set_title("Select video(s) to queue to Smoothie")
+                .set_directory("/")
+                .pick_files();
 
-        args.input = match input {
-            Some(paths) => paths,
-            None => std::process::exit(0),
-        };
+            dbg!(&input);
+
+            args.input = match input {
+                Some(paths) => paths,
+                None => std::process::exit(0),
+            };
+        }
     }
 
     // Option 2: picked files in option 1 / used a shortcut Send to / the CLI
     if !args.input.is_empty() {
-        // input is a vector of paths
-        for vid in &mut args.input {
+        // input is a vector of paths (can be files or folders)
+        let mut all_input_paths: Vec<PathBuf> = Vec::new();
+
+        for input_path in &args.input {
+            if input_path.is_dir() {
+                println!(
+                    "{}",
+                    format!("Scanning folder: {:?}", input_path).on_yellow()
+                );
+                let found_videos = find_videos_in_folder(input_path, args.recursive);
+                if found_videos.is_empty() {
+                    println!(
+                        "{}",
+                        format!("No video files found in folder: {:?}", input_path).on_yellow()
+                    );
+                } else {
+                    println!(
+                        "{}",
+                        format!("Found {} video(s) in folder", found_videos.len()).on_green()
+                    );
+                    all_input_paths.extend(found_videos);
+                }
+            } else if input_path.is_file() {
+                all_input_paths.push(input_path.clone());
+            } else {
+                println!(
+                    "{}",
+                    format!("{:?} does not exist or is not a valid path", input_path).on_red()
+                );
+            }
+        }
+
+        // Process all collected video paths
+        for vid in &all_input_paths {
             let probe = match probe_video(vid) {
                 Some(probe) => probe,
                 None => continue, // filtered out

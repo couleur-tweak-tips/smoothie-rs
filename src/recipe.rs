@@ -1,7 +1,7 @@
 use crate::cli::Arguments;
+use crate::portable;
 use crate::verb;
 use crate::{NO, YES};
-use crate::portable;
 use indexmap::map::Entry;
 use indexmap::map::IndexMap;
 use indexmap::map::Keys;

@@ -75,10 +75,9 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
     };
     let bin_dir_vspipe = cur_exe_dir.join(vs_bin);
     let vspipe_in_path = which("vspipe");
-    let vs_path = (
-        if args.vspipe_path.is_some(){
-        args.vspipe_path.unwrap()}
-    else if bin_dir_vspipe.exists() {
+    let vs_path = (if args.vspipe_path.is_some() {
+        args.vspipe_path.unwrap()
+    } else if bin_dir_vspipe.exists() {
         verb!("Using vspipe that's in same directory as binary");
         bin_dir_vspipe
     } else if vspipe_in_path.is_ok() {
@@ -109,7 +108,6 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
         old one : let rc_string = serde_json::to_string(&recipe).expect("Failed serializing recipe to JSON");
     */
     let rc_string = (format!("{:?}", &recipe)).replace("Recipe { data: {", "{ \"data\": {");
-
 
     let vs_args = vec![
         // "--progress".to_owned(),
@@ -154,7 +152,7 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
                     "--start".to_owned(),
                     p.to_string(),
                     "--end".to_owned(),
-                    p.to_string()
+                    p.to_string(),
                 ]);
             }
         } else if args.tonull {
@@ -172,7 +170,7 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
                     "--start".to_owned(),
                     p.to_string(),
                     "--end".to_owned(),
-                    p.to_string()
+                    p.to_string(),
                 ]);
             } else if args.stripaudio {
                 cur_cmd_arguments.append(&mut enc_args.clone());
@@ -223,7 +221,6 @@ pub fn build_commands(args: Arguments, payloads: Vec<Payload>, recipe: Recipe) -
                             format!("[outa{track_number}]").to_owned(),
                         ]);
                     }
-
                 } else {
                     cur_cmd_arguments.append(&mut vec![
                         "-i".to_owned(),
