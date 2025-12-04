@@ -3,7 +3,7 @@ use color_eyre::owo_colors::OwoColorize;
 use ffprobe::FfProbe;
 use rand::seq::IndexedRandom;
 use rfd::FileDialog;
-use std::{collections::HashMap, fs, path::PathBuf};
+use std::{collections::HashMap, fs, path::{Path, PathBuf}};
 use which::which;
 
 #[derive(Debug, Clone)]
@@ -50,7 +50,6 @@ fn probe_video(input: &PathBuf) -> Option<FfProbe> {
         }
     };
 
-    // Try to open the file
     let file = match fs::File::open(&path) {
         Ok(file) => file,
         _ => {
@@ -59,7 +58,6 @@ fn probe_video(input: &PathBuf) -> Option<FfProbe> {
         }
     };
 
-    // Check if the file is empty (0 bytes)
     let metadata = file.metadata().expect("Error getting input file metadata");
     if metadata.len() == 0 {
         println!(
@@ -111,11 +109,6 @@ pub fn resolve_outpath(
         "%FILENAME%-SM".to_string()
     } else {
         recipe.get("output", "file format").to_uppercase()
-        // .get("output")
-        // .expect("Failed getting [output] from recipe")
-        // .get("file format")
-        // .expect("Failed getting `[output] file format:` from recipe")
-        // .to_uppercase()
     };
 
     let out_dir = if args.outdir.is_some() {
@@ -143,7 +136,7 @@ pub fn resolve_outpath(
             ),
         );
     }
-    // create list of vars with section, key, and placeholder name
+
     let variables = vec![
         ("interpolation", "fps", "INTERP_FPS"),
         ("interpolation", "speed", "SPEED"),
@@ -156,17 +149,13 @@ pub fn resolve_outpath(
         ("miscellaneous", "dedup threshold", "DEDUP"),
         ("pre-interp", "factor", "FACTOR"),
     ];
-    // loop through each var
+
     for (section, key, var) in variables {
-        // check if file format string contains this var's placeholder
         if format.contains(&format!("%{}%", var)) {
-            // get var value from recipe using section and key
             let mut value = recipe.get(section, key);
-            // truncate weigting var if too long
             if key == "weighting" && value.len() > 15 {
                 value = format!("{}..", &value[..15]);
             }
-            // replace filename forbidden characters with underscores
             value = value
                 .chars()
                 .map(|c| match c {
@@ -174,11 +163,9 @@ pub fn resolve_outpath(
                     _ => c,
                 })
                 .collect();
-            // skip this var if value is empty
             if value.trim().is_empty() {
                 continue;
             }
-            // replace placeholder with an actual value
             format = format.replace(&format!("%{}%", var), &value);
         }
     }
@@ -189,11 +176,6 @@ pub fn resolve_outpath(
     }
 
     let rc_container = recipe.get("output", "container").trim().to_owned();
-    // .expect("Failed getting [output] from recipe")
-    // .get("container")
-    // .expect("Failed getting `[output] container:` from recipe")
-    // .trim();
-
     let container: String = if rc_container.is_empty() {
         println!("Defaulting output extension to .MP4");
         String::from("MP4")
@@ -211,6 +193,40 @@ pub fn resolve_outpath(
     }
 
     out
+}
+
+/// Recursively collect all video files from a folder
+fn collect_videos_from_folder(folder: &Path, recursive: bool) -> Vec<PathBuf> {
+    let mut videos = vec![];
+
+    if !folder.is_dir() {
+        println!("{} is not a folder, skipping.", folder.display());
+        return videos;
+    }
+
+    let entries = match fs::read_dir(folder) {
+        Ok(e) => e,
+        Err(e) => {
+            println!("Failed reading folder {}: {}", folder.display(), e);
+            return videos;
+        }
+    };
+
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        if path.is_file() {
+            if crate::VIDEO_EXTENSIONS
+                .iter()
+                .any(|ext| path.extension().map_or(false, |e| e.eq_ignore_ascii_case(ext)))
+            {
+                videos.push(path);
+            }
+        } else if path.is_dir() && recursive {
+            videos.extend(collect_videos_from_folder(&path, recursive));
+        }
+    }
+
+    videos
 }
 
 /// Attempts to resolve and structure input structs from CLI arguments
@@ -240,18 +256,23 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
         } else {
             "ffplay"
         };
-        panic!("You have the preview window enabled, but {term} is not installed/in PATH, ensure FULL FFmpeg is installed (ffmpeg, ffprobe and ffplay.");
+        panic!("You have the preview window enabled, but {term} is not installed/in PATH, ensure FULL FFmpeg is installed (ffmpeg, ffprobe and ffplay).");
     }
 
     // Option 1: launched a shortcut that had --tui in args
     if args.tui && args.input.is_empty() && args.json.is_none() {
-        let input = FileDialog::new()
-            .add_filter("Video file", crate::VIDEO_EXTENSIONS)
-            .set_title("Select video(s) to queue to Smoothie")
-            .set_directory("/")
-            .pick_files();
-
-        dbg!(&input);
+        let input = if args.recursive {
+            // Folder picker for recursive mode
+            FileDialog::new()
+                .set_title("Select folder(s) to queue to Smoothie")
+                .pick_folders()
+        } else {
+            // Normal file picker
+            FileDialog::new()
+                .add_filter("Video file", crate::VIDEO_EXTENSIONS)
+                .set_title("Select video(s) to queue to Smoothie")
+                .pick_files()
+        };
 
         args.input = match input {
             Some(paths) => paths,
@@ -259,21 +280,30 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
         };
     }
 
-    // Option 2: picked files in option 1 / used a shortcut Send to / the CLI
+    // Option 2: picked files / folders in args.input
     if !args.input.is_empty() {
-        // input is a vector of paths
-        for vid in &mut args.input {
-            let probe = match probe_video(vid) {
+        let mut all_input_videos: Vec<PathBuf> = vec![];
+
+        for input in &args.input {
+            if input.is_file() {
+                all_input_videos.push(input.clone());
+            } else if input.is_dir() {
+                all_input_videos.extend(collect_videos_from_folder(
+                    &input,
+                    args.recursive,
+                ));
+            } else {
+                println!("Input path {:?} does not exist, skipping.", input);
+            }
+        }
+
+        for vid in all_input_videos {
+            let probe = match probe_video(&vid) {
                 Some(probe) => probe,
-                None => continue, // filtered out
+                None => continue,
             };
 
-            videos.push((
-                vid.canonicalize()
-                    .expect("Failed getting full input file path"),
-                probe,
-                None,
-            ));
+            videos.push((vid.canonicalize().expect("Failed canonicalize"), probe, None));
         }
 
     // Option 3: suckless-cut / Smoothie Pre-Render
