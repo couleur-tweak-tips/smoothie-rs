@@ -315,12 +315,7 @@ If you'd like help, take a screenshot of this message and your recipe and come o
         }
     };
 
-    // Some launcher shortcuts (e.g., Windows SendTo) place a placeholder like `-i` in the
-    // shortcut's Target and Explorer appends the selected file/folder paths afterwards.
-    // Clap normally parses those correctly, but in some edge cases the `input` vector
-    // can end up empty or contain a lone dash. To be resilient, reconstruct inputs by
-    // scanning `env::args_os()` for `-i`/`--input` and collecting following non-flag
-    // tokens as file paths.
+    // resolve -i properly
     if parsed_args.input.is_empty() || parsed_args.input.iter().any(|p| p.to_string_lossy() == "-")
     {
         let raw_args: Vec<_> = env::args_os().collect();
