@@ -68,7 +68,15 @@ def eprint(*msg, **kwargs):
 verb(f"CONTEXT: Using vapoursynth bindings from {vs.__file__}")
 verb(f"CONTEXT: __file__: {__file__}")
 
+if "OneDrive" in input_video: # onedrive causes issues sometimes
+    eprint("WARNING: Your input path appears to be in a OneDrive folder.")
+    eprint("This is can cause issues, please consider moving it.\n")
+
 if 'video_in' in vars():
+    if "OneDrive" in video_in: # onedrive causes issues sometimes
+        eprint("WARNING: Your input path appears to be in a OneDrive folder.")
+        eprint("This is can cause issues, please consider moving it.\n")
+
     clip = video_in
     clip = core.std.AssumeFPS(clip, fpsnum=container_fps)
 
@@ -193,6 +201,10 @@ def resolve_mask_path(folder_path: str, file_name: str):
 
     mask_path = path.join(folder_path, file_name)
 
+    # quotes can cause issues with path recognition
+    if not path.exists(mask_path):
+        mask_path = mask_path.replace('"', "")
+
     if not path.exists(mask_path):
 
         default_mask_dir = path.join(path.dirname(path.dirname(__file__)), "artifact masks")
@@ -202,9 +214,10 @@ def resolve_mask_path(folder_path: str, file_name: str):
         if not path.exists(mask_path):
             eprint(f"EXPECTED: {mask_path}")
             raise ValueError(
-                "Could not resolve your mask's input path, \n"
+                "Could not resolve your mask's input path. \n"
                 "The path of the mask you specify must be absolute \n"
-                "(get it by doing shift-right click the image -> Copy As Path)"
+                "(get it by doing shift-right click the image -> Copy As Path)\n"
+                "and your mask file must actually exist."
             )
     return mask_path
 
@@ -281,7 +294,18 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
 
         if not path.isdir(relative_model_path):
             eprint(f"\n\ndefault_model_dir does not exist, expected: {relative_model_path}")
-            raise NotADirectoryError("Could not find RIFE model directory..")
+
+            if relative_model_path.contains("OneDrive"): # onedrive causes issues sometimes
+                eprint("WARNING: Your model path appears to be a OneDrive folder.")
+                eprint("This is likely to cause issues, please consider moving it.\n")
+
+            raise NotADirectoryError(
+                "Could not find RIFE model directory...\n"
+                "Ensure that the 'model' argument under [pre-interp] in your\n"
+                "recipe has a valid path to your RIFE model.\n"
+                "If you don't know what this means, you likely do not have a\n"
+                "RIFE model installed and need to install one before using pre-interp."
+            )
 
         model_path = relative_model_path
 
