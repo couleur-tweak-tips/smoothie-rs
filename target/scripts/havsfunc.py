@@ -61,7 +61,7 @@ def Overlay(base, overlay, x=0, y=0, mask=None, opacity=1.0, mode='normal', plan
             raise vs.Error("Overlay: 'mask' is not a clip")
 
         if mask.width != overlay.width or mask.height != overlay.height or mask.format.bits_per_sample != overlay.format.bits_per_sample:
-            raise vs.Error("Overlay: 'mask' must have the same dimensions and bit depth as 'overlay'")
+            raise vs.Error(f"Overlay: 'mask' ({mask.width}x{mask.height}, {mask.format.bits_per_sample} bit) must have the same dimensions and bit depth as 'overlay' ({overlay.width}x{overlay.height}, {overlay.format.bits_per_sample} bit)")
 
     if base.format.sample_type == vs.INTEGER:
         neutral = 1 << (base.format.bits_per_sample - 1)
