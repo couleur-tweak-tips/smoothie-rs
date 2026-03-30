@@ -1,7 +1,7 @@
 use crate::cli::Arguments;
+use crate::portable;
 use crate::verb;
 use crate::{NO, YES};
-use crate::portable;
 use indexmap::map::Entry;
 use indexmap::map::IndexMap;
 use indexmap::map::Keys;
@@ -394,27 +394,21 @@ pub fn export_recipe(
 }
 
 pub fn get_recipe(args: &mut Arguments) -> (Recipe, WidgetMetadata) {
-    let exe = match env::current_exe() {
-        Ok(exe) => exe,
-        Err(e) => panic!("Could not resolve Smoothie's binary path: {}", e),
-    };
-
-    let bin_dir = match exe.parent() {
-        Some(bin_dir) => bin_dir.parent().unwrap(),
-        None => panic!("Could not resolve Smoothie's binary directory `{exe:?}`"),
-    };
-
     let rc_path = if PathBuf::from(&args.recipe).exists() {
         PathBuf::from(&args.recipe)
     } else {
-        let cur_dir_rc = portable::get_recipe_path_custom(&args.recipe);
-        if !cur_dir_rc.exists() {
-            panic!(
-                "Recipe filepath does not exist (expected at {})",
-                cur_dir_rc.display()
-            )
+        if args.recipe == "recipe.ini" {
+            portable::get_recipe_path()
+        } else {
+            let cur_dir_rc = portable::get_recipe_path_custom(&args.recipe);
+            if !cur_dir_rc.exists() {
+                panic!(
+                    "Recipe filepath does not exist (expected at {})",
+                    cur_dir_rc.display()
+                )
+            }
+            cur_dir_rc
         }
-        cur_dir_rc
     };
     args.recipe = rc_path.display().to_string();
 
@@ -422,7 +416,7 @@ pub fn get_recipe(args: &mut Arguments) -> (Recipe, WidgetMetadata) {
     let mut metadata = Some(WidgetMetadata::new());
 
     parse_recipe(
-        Path::join(bin_dir, "defaults.ini"),
+        portable::get_defaults_path(),
         None,
         &mut rc,
         &mut metadata,

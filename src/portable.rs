@@ -1,5 +1,8 @@
 use homedir;
-use std::{env, fs, os::windows::fs::FileTypeExt, path::PathBuf};
+use std::{env, fs, path::PathBuf};
+
+#[cfg(windows)]
+use std::os::windows::fs::FileTypeExt;
 
 const DEFAULT_RECIPE: &str = include_str!("../target/recipe.ini");
 const DEFAULT_ENCODING_PRESETS: &str = include_str!("../target/encoding_presets.ini");
@@ -75,7 +78,13 @@ pub fn get_config_filepaths() -> Vec<PathBuf> {
             continue;
         }
 
+        #[cfg(windows)]
         if filetype.is_symlink() || filetype.is_symlink_file() {
+            panic!("implement recipe file symlink parsing yourself :)")
+        }
+
+        #[cfg(not(windows))]
+        if filetype.is_symlink() {
             panic!("implement recipe file symlink parsing yourself :)")
         }
 
