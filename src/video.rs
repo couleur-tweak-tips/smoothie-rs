@@ -22,20 +22,6 @@ pub struct Timecodes {
     pub fin: String,
 }
 
-/// Creates a directory to the given folder path (mainly used for args.outdir)
-fn ensure_dir(dir: &PathBuf, silent: bool) {
-    if !dir.is_dir() {
-        match fs::create_dir(dir) {
-            Ok(_) => {
-                if !silent {
-                    println!("Creating folder `{dir:?}`")
-                }
-            }
-            Err(e) => panic!("Failed creating folder at `{dir:?}`, Error: {}", e),
-        }
-    }
-}
-
 /// Only returns videos that are valid (exists, ffprobe-able)
 fn probe_video(input: &PathBuf) -> Option<FfProbe> {
     let path = match input.canonicalize() {
@@ -111,25 +97,25 @@ pub fn resolve_outpath(
         "%FILENAME%-SM".to_string()
     } else {
         recipe.get("output", "file format").to_uppercase()
-        // .get("output")
-        // .expect("Failed getting [output] from recipe")
-        // .get("file format")
-        // .expect("Failed getting `[output] file format:` from recipe")
-        // .to_uppercase()
     };
 
-    let out_dir = if args.outdir.is_some() {
-        ensure_dir(
-            args.outdir
-                .as_ref()
-                .expect("--outdir: Failed unwrapping value in --outdir"),
-            false,
-        );
-        args.outdir
-            .clone()
-            .expect("Failed unwrapping string passed in --outdir")
+    // Fallback chain: --outdir CLI > recipe "output folder" > input video's directory
+    let out_dir = if let Some(ref outdir) = args.outdir {
+        if !outdir.is_dir() {
+            panic!("--outdir {outdir:?} does not exist or is not a directory");
+        }
+        outdir.canonicalize().unwrap_or_else(|_| outdir.clone())
     } else {
-        in_dir
+        let recipe_outdir = recipe.get("output", "folder");
+        if !recipe_outdir.trim().is_empty() {
+            let recipe_path = PathBuf::from(recipe_outdir.trim());
+            if !recipe_path.is_dir() {
+                panic!("Recipe's [output] folder: {recipe_path:?} does not exist or is not a directory");
+            }
+            recipe_path.canonicalize().unwrap_or(recipe_path)
+        } else {
+            in_dir
+        }
     };
 
     if format.contains("%FRUITS%") || format.contains("%FRUIT") {
@@ -143,7 +129,7 @@ pub fn resolve_outpath(
             ),
         );
     }
-    // create list of vars with section, key, and placeholder name
+
     let variables = vec![
         ("interpolation", "fps", "INTERP_FPS"),
         ("interpolation", "speed", "SPEED"),
@@ -156,17 +142,13 @@ pub fn resolve_outpath(
         ("miscellaneous", "dedup threshold", "DEDUP"),
         ("pre-interp", "factor", "FACTOR"),
     ];
-    // loop through each var
+
     for (section, key, var) in variables {
-        // check if file format string contains this var's placeholder
         if format.contains(&format!("%{}%", var)) {
-            // get var value from recipe using section and key
             let mut value = recipe.get(section, key);
-            // truncate weigting var if too long
             if key == "weighting" && value.len() > 15 {
                 value = format!("{}..", &value[..15]);
             }
-            // replace filename forbidden characters with underscores
             value = value
                 .chars()
                 .map(|c| match c {
@@ -174,14 +156,13 @@ pub fn resolve_outpath(
                     _ => c,
                 })
                 .collect();
-            // skip this var if value is empty
             if value.trim().is_empty() {
                 continue;
             }
-            // replace placeholder with an actual value
             format = format.replace(&format!("%{}%", var), &value);
         }
     }
+
     if format.contains("%FILENAME") {
         format = format.replace("%FILENAME%", &basename);
     } else {
@@ -189,10 +170,6 @@ pub fn resolve_outpath(
     }
 
     let rc_container = recipe.get("output", "container").trim().to_owned();
-    // .expect("Failed getting [output] from recipe")
-    // .get("container")
-    // .expect("Failed getting `[output] container:` from recipe")
-    // .trim();
 
     let container: String = if rc_container.is_empty() {
         println!("Defaulting output extension to .MP4");
