@@ -22,20 +22,6 @@ pub struct Timecodes {
     pub fin: String,
 }
 
-/// Creates a directory to the given folder path (mainly used for args.outdir)
-fn ensure_dir(dir: &PathBuf, silent: bool) {
-    if !dir.is_dir() {
-        match fs::create_dir(dir) {
-            Ok(_) => {
-                if !silent {
-                    println!("Creating folder `{dir:?}`")
-                }
-            }
-            Err(e) => panic!("Failed creating folder at `{dir:?}`, Error: {}", e),
-        }
-    }
-}
-
 /// Only returns videos that are valid (exists, ffprobe-able)
 fn probe_video(input: &PathBuf) -> Option<FfProbe> {
     let path = match input.canonicalize() {
@@ -118,19 +104,24 @@ pub fn resolve_outpath(
         // .to_uppercase()
     };
 
-    let out_dir = if args.outdir.is_some() {
-        ensure_dir(
-            args.outdir
-                .as_ref()
-                .expect("--outdir: Failed unwrapping value in --outdir"),
-            false,
-        );
-        args.outdir
-            .clone()
-            .expect("Failed unwrapping string passed in --outdir")
-    } else {
-        in_dir
-    };
+    let gof:Option<String>=recipe.get_option("miscellaneous", "global output folder"); 
+
+    let out_dir = if let Some(ref outdir) = args.outdir {
+        if !outdir.is_dir() {
+            panic!("--outdir {outdir:?} does not exist or is not a directory");
+        }
+        outdir.canonicalize().unwrap_or_else(|_| outdir.clone())
+    } else if gof.is_some() && !gof.unwrap().is_empty(){
+        let recipe_outdir = recipe.get("miscellaneous", "global output folder");
+        let recipe_path = PathBuf::from(recipe_outdir.trim());
+
+        if !recipe_path.is_dir() {
+            panic!("Recipe's global output folder {recipe_path:?} does not exist or is not a directory");
+        }
+            recipe_path.canonicalize().unwrap_or(recipe_path)
+        } else {
+            in_dir
+        };
 
     if format.contains("%FRUITS%") || format.contains("%FRUIT") {
         format = format.replace("%FRUIT%", "%FRUITS%").replace(
