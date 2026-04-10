@@ -299,7 +299,7 @@ if (pi := rc['pre-interp'])['enabled'].lower() in YES:
         if not path.isdir(relative_model_path):
             eprint(f"\n\ndefault_model_dir does not exist, expected: {relative_model_path}")
 
-            if relative_model_path.contains("OneDrive"): # onedrive causes issues sometimes
+            if "OneDrive" in relative_model_path: # onedrive causes issues sometimes
                 eprint("WARNING: Your model path appears to be a OneDrive folder.")
                 eprint("This is likely to cause issues, please consider moving it.\n")
 
