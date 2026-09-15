@@ -3,7 +3,11 @@ use color_eyre::owo_colors::OwoColorize;
 use ffprobe::FfProbe;
 use rand::seq::IndexedRandom;
 use rfd::FileDialog;
-use std::{collections::HashMap, fs, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::PathBuf,
+};
 use which::which;
 
 #[derive(Debug, Clone)]
@@ -76,6 +80,7 @@ pub fn resolve_outpath(
     in_dir: PathBuf,
     basename: String,
     dont_format: bool,
+    claimed: &mut HashSet<PathBuf>,
 ) -> PathBuf {
     if args.output.is_some() {
         return PathBuf::from(args.output.as_ref().expect("Failed unwrapping --output"));
@@ -194,12 +199,20 @@ pub fn resolve_outpath(
 
     let mut out = out_dir.join(format!("{}.{}", &format, &container));
     let mut round = 2;
-    while out.exists() {
+    // `.exists()` alone only sees what's already on disk — every payload in a
+    // batch is resolved before any of them are rendered, so two inputs that
+    // format to the same name (shared filenames across source folders, or
+    // videos in the same folder with `%FILENAME%` missing from the format)
+    // would otherwise both land on the same not-yet-written path and one
+    // render silently clobbers the other. `claimed` remembers what this run
+    // has already handed out so the second one steps to " (2)" instead.
+    while out.exists() || claimed.contains(&out) {
         out = out_dir
             .clone()
             .join(format!("{} ({round}).{}", &format, &container));
         round += 1;
     }
+    claimed.insert(out.clone());
 
     out
 }
@@ -286,6 +299,7 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
         }
     }
 
+    let mut claimed_outpaths: HashSet<PathBuf> = HashSet::new();
     for (vid, probe, timecodes) in videos {
         payloads.push(Payload {
             in_path: vid.clone(),
@@ -299,6 +313,7 @@ pub fn resolve_input(args: &mut Arguments, recipe: &Recipe) -> Vec<Payload> {
                     .expect("Failed converting")
                     .to_string(),
                 false,
+                &mut claimed_outpaths,
             ),
             basename: vid
                 .file_stem()
